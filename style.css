@@ -1,0 +1,488 @@
+/* ========================================
+   CSS Variables & Base Styles
+======================================== */
+:root {
+    --bg-gradient-start: #0f0c29;
+    --bg-gradient-mid: #302b63;
+    --bg-gradient-end: #24243e;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --accent-cyan: #00d9ff;
+    --accent-purple: #a855f7;
+    --negative-red: #ff6b6b;
+    --advice-glow: rgba(0, 217, 255, 0.3);
+    --input-bg: rgba(255, 255, 255, 0.08);
+    --input-border: rgba(255, 255, 255, 0.2);
+    --input-focus: rgba(0, 217, 255, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+    min-height: 100vh;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* ========================================
+   Container & Layout
+======================================== */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+h1 {
+    text-align: left;
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: inline-block;
+    padding-bottom: 0px;
+}
+
+.subtitle {
+    display: none;
+    /* Hide subtitle to match image cleanliness */
+}
+
+/* ========================================
+   Card Styles (Glassmorphism)
+======================================== */
+.card {
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.05), rgba(168, 85, 247, 0.05));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card h2 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
+}
+
+/* ========================================
+   Input Section
+======================================== */
+.input-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* Force equal width */
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.input-group label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    padding: 0 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px var(--input-focus);
+}
+
+.input-wrapper input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+    padding: 10px 0;
+    outline: none;
+    width: 100%;
+}
+
+.input-wrapper input::-webkit-outer-spin-button,
+.input-wrapper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-wrapper .unit {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+select {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-family: inherit;
+    padding: 10px 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+select:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px var(--input-focus);
+}
+
+select option {
+    background: var(--bg-gradient-mid);
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Result Section
+======================================== */
+.divider {
+    height: 1px;
+    background: var(--card-border);
+    margin: 16px 0;
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.result-row .label {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.result-row .value {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.result-row.total-gross .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.deduction-header {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.result-row.deduction .label {
+    font-size: 0.9rem;
+}
+
+.result-row.deduction .value {
+    font-size: 0.9rem;
+}
+
+.value.negative {
+    color: var(--negative-red);
+}
+
+.value.positive {
+    color: #4ade80;
+}
+
+.result-row.net-pay {
+    margin-top: 8px;
+}
+
+.result-row.net-pay .label {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.result-row.net-pay .value {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.value.highlight {
+    color: var(--accent-cyan);
+    text-shadow: 0 0 20px var(--advice-glow);
+}
+
+/* ========================================
+   Annual Card (Now Top)
+======================================== */
+.annual-card {
+    /* Background inherited from .card to match others */
+    margin-bottom: 25px;
+}
+
+.annual-card h2 {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+.annual-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.annual-item {
+    background: var(--input-bg);
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.annual-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+
+.annual-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.annual-value.highlight {
+    color: var(--accent-cyan);
+    font-size: 1.3rem;
+    /* Slightly larger for emphasis */
+}
+
+/* Furusato Section */
+.annual-item.furusato {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(0, 217, 255, 0.05));
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+}
+
+.furusato-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.furusato-header .annual-label {
+    font-size: 0.95rem;
+    /* Larger label */
+    margin-bottom: 0;
+    color: var(--text-primary);
+}
+
+.furusato-link {
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
+    text-decoration: none;
+    border: 1px solid var(--accent-cyan);
+    padding: 4px 12px;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+    background: rgba(0, 217, 255, 0.1);
+}
+
+.furusato-link:hover {
+    background: var(--accent-cyan);
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.furusato-value-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.0rem;
+    color: var(--accent-purple);
+}
+
+.furusato-arrow {
+    color: #eab308;
+    /* Yellow arrow */
+    font-weight: bold;
+}
+
+.furusato-text {
+    font-weight: 500;
+}
+
+.furusato-text .accent {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   Advice Card
+======================================== */
+.advice-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(168, 85, 247, 0.1));
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    box-shadow: 0 0 20px var(--advice-glow);
+}
+
+.advice-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.advice-text {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.7;
+}
+
+/* ========================================
+   Footer
+======================================== */
+footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+/* ========================================
+   Responsive
+======================================== */
+@media (max-width: 480px) {
+    .container {
+        padding: 16px;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .input-section {
+        grid-template-columns: 1fr;
+    }
+
+    .annual-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .annual-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+    }
+
+    .annual-label {
+        margin-bottom: 0;
+    }
+}
+
+/* ========================================
+   PC Layout (2 Columns)
+======================================== */
+@media (min-width: 1024px) {
+    .container {
+        max-width: 1200px;
+        /* Wider container for 2 columns */
+    }
+
+    /* Wrap content in a grid */
+    main {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+
+    /* Left column content */
+    .left-column {
+        grid-column: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+
+    /* Right column content (Chart) */
+    .right-column {
+        grid-column: 2;
+        background: linear-gradient(135deg, rgba(0, 217, 255, 0.05), rgba(168, 85, 247, 0.05));
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(0, 217, 255, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        height: 100%;
+        min-height: 600px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-container {
+        flex: 1;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 500px;
+        /* Ensure chart has height */
+    }
+}
+
+/* Ensure ALL hover transforms are gone */
+.card:hover,
+.advice-card:hover {
+    transform: none !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
