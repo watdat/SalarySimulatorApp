@@ -210,6 +210,24 @@ function isAprilToJunePeriod(period) {
     return month >= 4 && month <= 6;
 }
 
+// 社会保険料の計算（簡易版）
+function calculateSocialInsurance(monthlyGross, age) {
+    const standardRemuneration = getStandardRemuneration(monthlyGross);
+    const health = Math.round(standardRemuneration * RATES.healthInsurance);
+    const pension = Math.round(standardRemuneration * RATES.pension);
+    const employment = Math.round(monthlyGross * RATES.employmentInsurance);
+    const nursing = (age >= 40) ? Math.round(standardRemuneration * RATES.nursingInsurance) : 0;
+    return health + pension + employment + nursing;
+}
+
+// 住民税の計算（簡易版）
+function calculateResidentTax(annualTaxableIncome) {
+    const salaryDeduction = calculateSalaryDeduction(annualTaxableIncome);
+    const basicDeduction = 430000; // 住民税の基礎控除
+    const taxableIncome = Math.max(0, annualTaxableIncome - salaryDeduction - basicDeduction);
+    return Math.round(taxableIncome * RATES.residentTax) + RATES.residentTaxFixed;
+}
+
 // ========================================
 // メイン計算ロジック
 // ========================================
@@ -553,7 +571,7 @@ function generateAdvice(totalPayment, overtimePay, overtimeHours, overtimePeriod
                 (overtimeHours % 1 > 0 ? Math.round((overtimeHours % 1) * 60) + '分' : '');
 
             adviceText.innerHTML = `
-                ⚠️ 4〜6月に残業が <strong>${hoursDisplay}</strong> 以上続くと、
+                 4〜6月に残業が <strong>${hoursDisplay}</strong> 以上続くと、
                 9月〜翌年8月の社会保険料が <strong>月額${formatCurrency(Math.round(monthlySocialInsuranceDiff))}</strong> 
                 増加し、年間で <strong>${formatCurrency(annualIncrease)}</strong> の負担増となります。
             `;
@@ -561,7 +579,7 @@ function generateAdvice(totalPayment, overtimePay, overtimeHours, overtimePeriod
             adviceCard.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(168, 85, 247, 0.1))';
         } else if (!isAprilToJunePeriod(overtimePeriod) && overtimePeriod !== 'none') {
             adviceText.innerHTML = `
-                ✨ 残業を4〜6月以外に集中させているため、社会保険料の等級上昇を回避できています。
+                 残業を4〜6月以外に集中させているため、社会保険料の等級上昇を回避できています。
                 もし同じ残業を4〜6月に行った場合、年間約 <strong>${formatCurrency(annualIncrease)}</strong> 
                 社会保険料が増加していました。
             `;
@@ -577,7 +595,7 @@ function generateAdvice(totalPayment, overtimePay, overtimeHours, overtimePeriod
         }
     } else {
         adviceText.innerHTML = `
-            💡 残業時間を入力すると、残業時期による社会保険料への影響をシミュレーションできます。
+             残業時間を入力すると、残業時期による社会保険料への影響をシミュレーションできます。
             4〜6月の残業は「標準報酬月額」を押し上げ、9月〜翌年8月の保険料が上がります。
         `;
         adviceCard.style.borderColor = 'rgba(0, 217, 255, 0.3)';
