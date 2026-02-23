@@ -57,6 +57,17 @@ h1 {
     padding-bottom: 0px;
 }
 
+.header-link {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.header-link:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
 .subtitle {
     display: none;
     /* Hide subtitle to match image cleanliness */
