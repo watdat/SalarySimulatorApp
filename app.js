@@ -99,6 +99,34 @@ function formatManYenDecimal(amount) {
     return `約${manYen.toFixed(1)}万円`;
 }
 
+/**
+ * 文字列を受け取り、数値計算結果を返すヘルパー
+ * 「+」「-」「*」「/」に対応
+ */
+function evaluateExpression(str) {
+    if (!str) return 0;
+    // 全角記号を半角に変換、不要な文字を除去
+    let normalized = str.toString()
+        .replace(/＋/g, '+')
+        .replace(/－/g, '-')
+        .replace(/＊/g, '*')
+        .replace(/／/g, '/')
+        .replace(/[^-0-9+*/.]/g, ''); // 数字と記号以外を除去
+
+    if (!normalized) return 0;
+
+    try {
+        // 安全に計算するために Function を使用
+        // 直接 eval するよりは限定的
+        const result = new Function(`return (${normalized})`)();
+        return isFinite(result) ? Math.round(result) : 0;
+    } catch (e) {
+        // 計算エラー時は数値のみを抽出して返す（フォールバック）
+        const fallback = parseInt(normalized.replace(/[^0-9]/g, '')) || 0;
+        return fallback;
+    }
+}
+
 function getStandardRemuneration(monthlySalary) {
     for (const grade of STANDARD_REMUNERATION_GRADES) {
         if (monthlySalary >= grade.min && monthlySalary < grade.max) {
@@ -232,9 +260,9 @@ function calculateResidentTax(annualTaxableIncome) {
 // メイン計算ロジック
 // ========================================
 function calculate() {
-    // 入力値を取得
-    const totalPayment = parseInt(document.getElementById('totalPayment').value) || 0;
-    const transportAllowance = parseInt(document.getElementById('transportAllowance').value) || 0;
+    // 入力値を取得（計算式に対応）
+    const totalPayment = evaluateExpression(document.getElementById('totalPayment').value);
+    const transportAllowance = evaluateExpression(document.getElementById('transportAllowance').value);
     const overtimeHoursStr = document.getElementById('overtimeHours').value || '0:00';
     const overtimePeriod = document.getElementById('overtimePeriod').value;
     const bonusMonths = parseFloat(document.getElementById('bonusMonths').value) || 0;
@@ -614,5 +642,15 @@ document.addEventListener('DOMContentLoaded', () => {
     inputs.forEach(input => {
         input.addEventListener('input', calculate);
         input.addEventListener('change', calculate);
+
+        // 特定の入力欄でフォーカスが外れた時に計算結果に置き換える
+        if (input.id === 'totalPayment' || input.id === 'transportAllowance') {
+            input.addEventListener('blur', (e) => {
+                const result = evaluateExpression(e.target.value);
+                if (result > 0) {
+                    e.target.value = result;
+                }
+            });
+        }
     });
 });

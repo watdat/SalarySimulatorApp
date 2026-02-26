@@ -25,16 +25,15 @@
                         <div class="input-group">
                             <label for="totalPayment">支払総額</label>
                             <div class="input-wrapper">
-                                <input type="number" id="totalPayment" value="276000" min="0" step="1000"
-                                    placeholder="基本給・諸手当">
+                                <input type="text" id="totalPayment" value="276000" placeholder="基本給・諸手当 (例: 20+5+1)">
                                 <span class="unit">円</span>
                             </div>
                         </div>
                         <div class="input-group">
                             <label for="transportAllowance">通勤交通費</label>
                             <div class="input-wrapper">
-                                <input type="number" id="transportAllowance" value="13860" min="0" step="1000"
-                                    placeholder="非課税の通勤手当">
+                                <input type="text" id="transportAllowance" value="12000"
+                                    placeholder="非課税の通勤手当 (例: 10+2)">
                                 <span class="unit">円</span>
                             </div>
                         </div>
@@ -69,7 +68,7 @@
                         <div class="input-group">
                             <label for="bonusMonths">ボーナス</label>
                             <div class="input-wrapper">
-                                <input type="number" id="bonusMonths" value="2.5" min="0" max="12" step="0.5"
+                                <input type="number" id="bonusMonths" value="0" min="0" max="12" step="0.5"
                                     placeholder="月数">
                                 <span class="unit">ヶ月</span>
                             </div>
@@ -78,7 +77,7 @@
                             <label for="age">年齢</label>
                             <select id="age">
                                 <option value="under40">40歳未満</option>
-                                <option value="over40">40歳以上</option>
+                                <option value="over40" selected>40歳以上</option>
                             </select>
                         </div>
                         <div class="input-group">
