@@ -245,14 +245,14 @@ function calculate() {
     // 残業時間を解析
     const overtimeHours = parseOvertimeHours(overtimeHoursStr);
 
-    // 基本給（交通費除く）を逆算
-    const baseSalaryExcludingTransport = totalPayment - transportAllowance;
+    // 基本給（交通費除く）＝ 支払総額入力値
+    const baseSalaryExcludingTransport = totalPayment;
 
     // 残業代を計算
     const overtimePay = calculateOvertimePay(baseSalaryExcludingTransport, overtimeHours);
 
-    // 月額総支給額（残業代含む、その他支給・控除は別途）
-    const totalGross = totalPayment + overtimePay;
+    // 月額総支給額（支払総額 + 交通費 + 残業代）
+    const totalGross = totalPayment + transportAllowance + overtimePay;
 
     // 標準報酬月額 (社会保険料計算用) - その他支給は含めない
     const standardRemuneration = getStandardRemuneration(totalGross);
@@ -272,6 +272,7 @@ function calculate() {
     // ---------------------------
     // 税金 (月額概算)
     // ---------------------------
+    // 課税対象額 = 総支給額 - 交通費
     const taxableGross = totalGross - transportAllowance;
 
     // 年収ベースで計算
@@ -365,7 +366,7 @@ function calculate() {
     // ---------------------------
     // グラフ描画更新
     // ---------------------------
-    updateChart(totalPayment, overtimePay, overtimePeriod, bonusMonths, additionalPayment, additionalDeduction);
+    updateChart(totalPayment, transportAllowance, overtimePay, overtimePeriod, bonusMonths, additionalPayment, additionalDeduction);
 }
 
 // ---------------------------
@@ -399,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // -----------------------------------------------------
 let monthlyChart = null;
 
-function updateChart(basePayment, overtimePay, overtimePeriod, bonusMonths, addPayment, addDeduction) {
+function updateChart(basePayment, transportAllowance, overtimePay, overtimePeriod, bonusMonths, addPayment, addDeduction) {
     const ctx = document.getElementById('monthlyChart');
     if (!ctx) return; // 要素がない場合はスキップ
 
@@ -437,8 +438,8 @@ function updateChart(basePayment, overtimePay, overtimePeriod, bonusMonths, addP
             }
         }
 
-        // 月総支給（基本 + 残業 + その他 + ボーナス）
-        const currentTotalGross = basePayment + currentOvertimePay + addPayment + currentBonus;
+        // 月総支給（基本 + 交通費 + 残業 + その他 + ボーナス）
+        const currentTotalGross = basePayment + transportAllowance + currentOvertimePay + addPayment + currentBonus;
 
         // 社会保険・税金の簡易計算（ボーナス時は保険料も増えるが、ここでは近似計算とする）
         // ※正確には賞与の社会保険料計算が必要だが、簡易的に「総支給に対する比率」で近似
@@ -454,7 +455,7 @@ function updateChart(basePayment, overtimePay, overtimePeriod, bonusMonths, addP
         // 標準報酬月額の決定ロジックなどは複雑なため、
         // 「その月の総支給額」に基づいて控除額を単独計算する
         const si = calculateSocialInsurance(currentTotalGross, 40); // 年齢は一旦40歳未満固定扱い（簡易）
-        const it = calculateIncomeTax(currentTotalGross - si, 0); // 扶養0
+        const it = calculateIncomeTax(currentTotalGross - transportAllowance - si, 0); // 扶養0 住民税は別途
         // 住民税は前年所得ベースだが、ここでは「月割額」として一定とする（ボーナスからは引かれないのが通例だが、年収ベースの負担感として表示）
         const residentTaxText = document.getElementById('residentTax').textContent;
         // 数字以外を除去（マイナス、カンマ、円など全て除去して絶対値を取得）
