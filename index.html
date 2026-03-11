@@ -38,31 +38,31 @@
                             </div>
                         </div>
                         <div class="input-group">
-                            <label for="overtimeHours">残業時間</label>
+                            <label for="overtimeHours">目安残業H/日</label>
                             <div class="input-wrapper">
-                                <input type="text" id="overtimeHours" value="0:00" placeholder="月平均 (10:30)"
-                                    pattern="[0-9]+:[0-5][0-9]">
-                                <span class="unit">時間</span>
+                                <select id="overtimeHours">
+                                    <option value="0">0</option>
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="45">45</option>
+                                    <option value="60">60</option>
+                                    <option value="90">90</option>
+                                    <option value="120">120</option>
+                                    <option value="180">180</option>
+                                    <option value="240">240</option>
+                                </select>
+                                <span class="unit">分</span>
                             </div>
                         </div>
                         <div class="input-group">
-                            <label for="overtimePeriod">残業時期</label>
+                            <label for="overtimePeriod">残業繁忙時期</label>
                             <select id="overtimePeriod">
+                                <option value="all">通年繁忙</option>
+                                <option value="q1">1〜3月</option>
+                                <option value="q2">4〜6月</option>
+                                <option value="q3">7〜9月</option>
+                                <option value="q4">10〜12月</option>
                                 <option value="none">残業なし</option>
-                                <option value="1">1月</option>
-                                <option value="2">2月</option>
-                                <option value="3">3月</option>
-                                <option value="4">4月</option>
-                                <option value="5">5月</option>
-                                <option value="6">6月</option>
-                                <option value="7">7月</option>
-                                <option value="8">8月</option>
-                                <option value="9">9月</option>
-                                <option value="10">10月</option>
-                                <option value="11">11月</option>
-                                <option value="12">12月</option>
-                                <option value="first-half">1〜6月（4-6月含む）</option>
-                                <option value="second-half">7〜12月</option>
                             </select>
                         </div>
                         <div class="input-group">
@@ -83,16 +83,14 @@
                         <div class="input-group">
                             <label for="additionalPayment">その他支給</label>
                             <div class="input-wrapper">
-                                <input type="number" id="additionalPayment" value="0" min="0" step="100"
-                                    placeholder="立替清算等">
+                                <input type="text" id="additionalPayment" value="0" placeholder="歩合・手当等">
                                 <span class="unit">円</span>
                             </div>
                         </div>
                         <div class="input-group">
                             <label for="additionalDeduction">その他控除</label>
                             <div class="input-wrapper">
-                                <input type="number" id="additionalDeduction" value="0" min="0" step="100"
-                                    placeholder="給与天引き等">
+                                <input type="text" id="additionalDeduction" value="0" placeholder="給与天引き等">
                                 <span class="unit">円</span>
                             </div>
                         </div>
@@ -104,6 +102,18 @@
                         <div class="result-row total-gross">
                             <span class="label">総支給額</span>
                             <span class="value" id="totalGross">290,000円</span>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="addition-header">支給内訳（追加分のみ）</div>
+                        <div class="result-row addition">
+                            <span class="label">目安残業H/月</span>
+                            <span class="value" id="monthlyOvertimeHours">0H/月</span>
+                        </div>
+                        <div class="result-row addition" id="additionalPaymentRow" style="display: none;">
+                            <span class="label">その他支給</span>
+                            <span class="value positive" id="additionalPaymentDisplay">+0円</span>
                         </div>
 
                         <div class="deduction-header">控除内訳</div>
@@ -134,10 +144,6 @@
                         <div class="result-row deduction" id="additionalDeductionRow" style="display: none;">
                             <span class="label">その他控除</span>
                             <span class="value negative" id="additionalDeductionDisplay">-0円</span>
-                        </div>
-                        <div class="result-row addition" id="additionalPaymentRow" style="display: none;">
-                            <span class="label">その他支給</span>
-                            <span class="value positive" id="additionalPaymentDisplay">+0円</span>
                         </div>
 
                         <div class="divider"></div>

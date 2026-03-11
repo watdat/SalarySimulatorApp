@@ -217,7 +217,8 @@ select option {
     color: var(--text-primary);
 }
 
-.deduction-header {
+.deduction-header,
+.addition-header {
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-top: 8px;

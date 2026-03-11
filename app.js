@@ -80,13 +80,8 @@ const INCOME_TAX_TABLE = [
 // ========================================
 // ユーティリティ関数
 // ========================================
-function formatCurrency(amount, showSign = false) {
-    const absAmount = Math.abs(Math.round(amount));
-    const formatted = absAmount.toLocaleString('ja-JP');
-    if (showSign && amount < 0) {
-        return `-${formatted}円`;
-    }
-    return `${formatted}円`;
+function formatCurrency(number) {
+    return new Intl.NumberFormat('ja-JP').format(number);
 }
 
 function formatManYen(amount) {
@@ -146,14 +141,11 @@ function getGradeIndex(monthlySalary) {
     return STANDARD_REMUNERATION_GRADES.length - 1;
 }
 
-// 時間文字列（HH:MM）を時間数（小数）に変換
-function parseOvertimeHours(timeStr) {
-    if (!timeStr || timeStr === '0:00') return 0;
-    const parts = timeStr.split(':');
-    if (parts.length !== 2) return 0;
-    const hours = parseInt(parts[0]) || 0;
-    const minutes = parseInt(parts[1]) || 0;
-    return hours + (minutes / 60);
+// 日次の残業分（数値）を、月次の時間数（小数、20日分と仮定）に変換
+function parseOvertimeHours(dailyMinutes) {
+    const mins = parseInt(dailyMinutes) || 0;
+    const dailyHours = mins / 60;
+    return dailyHours * 20; // 月20日稼働と仮定
 }
 
 // 残業代を計算（時間から）
@@ -231,11 +223,9 @@ function calculateFurusatoLimit(annualIncome, annualSocialInsurance) {
     };
 }
 
-// 4-6月に該当するかチェック
+// 4-6月に該当するかチェック（4-6月が含まれる期間か）
 function isAprilToJunePeriod(period) {
-    if (period === 'first-half') return true;
-    const month = parseInt(period);
-    return month >= 4 && month <= 6;
+    return period === 'all' || period === 'q2';
 }
 
 // 社会保険料の計算（簡易版）
@@ -263,15 +253,17 @@ function calculate() {
     // 入力値を取得（計算式に対応）
     const totalPayment = evaluateExpression(document.getElementById('totalPayment').value);
     const transportAllowance = evaluateExpression(document.getElementById('transportAllowance').value);
-    const overtimeHoursStr = document.getElementById('overtimeHours').value || '0:00';
+    const overtimeMinutes = document.getElementById('overtimeHours').value;
     const overtimePeriod = document.getElementById('overtimePeriod').value;
     const bonusMonths = parseFloat(document.getElementById('bonusMonths').value) || 0;
     const ageGroup = document.getElementById('age').value;
-    const additionalPayment = parseInt(document.getElementById('additionalPayment').value) || 0;
-    const additionalDeduction = parseInt(document.getElementById('additionalDeduction').value) || 0;
+    const additionalPayment = evaluateExpression(document.getElementById('additionalPayment').value);
+    const additionalDeduction = evaluateExpression(document.getElementById('additionalDeduction').value);
+
+    const totalAdditionalPayment = additionalPayment;
 
     // 残業時間を解析
-    const overtimeHours = parseOvertimeHours(overtimeHoursStr);
+    const overtimeHours = parseOvertimeHours(overtimeMinutes);
 
     // 基本給（交通費除く）＝ 支払総額入力値
     const baseSalaryExcludingTransport = totalPayment;
@@ -279,10 +271,11 @@ function calculate() {
     // 残業代を計算
     const overtimePay = calculateOvertimePay(baseSalaryExcludingTransport, overtimeHours);
 
-    // 月額総支給額（支払総額 + 交通費 + 残業代）
-    const totalGross = totalPayment + transportAllowance + overtimePay;
+    // 月額総支給額（支払総額 + 交通費 + 残業代 + その他支給）
+    // ※ その他支給も社会保険料・税金の計算対象に含める（方法B）
+    const totalGross = totalPayment + transportAllowance + overtimePay + totalAdditionalPayment;
 
-    // 標準報酬月額 (社会保険料計算用) - その他支給は含めない
+    // 標準報酬月額 (社会保険料計算用)
     const standardRemuneration = getStandardRemuneration(totalGross);
 
     // ---------------------------
@@ -304,12 +297,38 @@ function calculate() {
     const taxableGross = totalGross - transportAllowance;
 
     // 年収ベースで計算
-    const annualTaxableGross = taxableGross * 12 + (baseSalaryExcludingTransport * bonusMonths);
+    // 繁忙時期に応じた年間残業代の計算
+    let annualOvertimePay = 0;
+    if (overtimePeriod === 'all') {
+        annualOvertimePay = overtimePay * 12;
+    } else if (overtimePeriod === 'q1' || overtimePeriod === 'q2' || overtimePeriod === 'q3' || overtimePeriod === 'q4') {
+        annualOvertimePay = overtimePay * 3; // 各四半期は3ヶ月
+    }
+
+    const annualTaxableGross = (totalPayment + transportAllowance + totalAdditionalPayment) * 12 + annualOvertimePay + (baseSalaryExcludingTransport * bonusMonths);
     const salaryDeduction = calculateSalaryDeduction(annualTaxableGross);
     const basicDeduction = 480000;
 
-    const annualSocialInsurance = totalSocialInsurance * 12 +
-        (standardRemuneration * (RATES.healthInsurance + RATES.pension + (ageGroup === 'over40' ? RATES.nursingInsurance : 0)) * bonusMonths);
+    // 社会保険料の年間合計（繁忙時期による変動を考慮）
+    // ※ 簡易化のため、4-6月の残業が社会保険料に反映されるロジックは advice で表現し、
+    //  ここでは「繁忙期の残業代を含んだ月」と「含まない月」の合計として計算する
+    const standardRemunerationWithOvertime = getStandardRemuneration(totalGross);
+    const standardRemunerationBase = getStandardRemuneration(totalPayment + transportAllowance);
+
+    const siRate = RATES.healthInsurance + RATES.pension + (ageGroup === 'over40' ? RATES.nursingInsurance : 0);
+
+    let annualSocialInsurance = 0;
+    if (overtimePeriod === 'all') {
+        annualSocialInsurance = standardRemunerationWithOvertime * siRate * 12;
+    } else if (overtimePeriod === 'q1' || overtimePeriod === 'q2' || overtimePeriod === 'q3' || overtimePeriod === 'q4') {
+        annualSocialInsurance = (standardRemunerationWithOvertime * siRate * 3) + (standardRemunerationBase * siRate * 9);
+    } else {
+        annualSocialInsurance = standardRemunerationBase * siRate * 12;
+    }
+
+    // 雇用保険料（実際の支払額にかかる）
+    const annualEmploymentInsurance = (annualTaxableGross) * RATES.employmentInsurance;
+    annualSocialInsurance += annualEmploymentInsurance;
 
     const taxableIncome = Math.max(0, annualTaxableGross - salaryDeduction - basicDeduction - annualSocialInsurance);
 
@@ -320,60 +339,66 @@ function calculate() {
     const monthlyResidentTax = Math.round(annualResidentTax / 12);
 
     // ---------------------------
-    // 月額手取り（その他支給・控除を含む）
+    // 月額手取り
     // ---------------------------
     const totalDeduction = totalSocialInsurance + monthlyIncomeTax + monthlyResidentTax + additionalDeduction;
-    const netPay = totalGross + additionalPayment - totalDeduction;
+    const netPay = totalGross - totalDeduction;
 
     // ---------------------------
-    // 年間計算（その他支給・控除は月額×12として概算）
+    // 年間計算
     // ---------------------------
-    const annualIncome = totalGross * 12 + (baseSalaryExcludingTransport * bonusMonths) + (additionalPayment * 12);
-    const annualDeduction = (totalSocialInsurance + monthlyIncomeTax + monthlyResidentTax) * 12 +
-        ((healthInsurance + nursingInsurance + pension) * bonusMonths) +
-        (baseSalaryExcludingTransport * bonusMonths * RATES.employmentInsurance) +
-        (additionalDeduction * 12);
-    const annualNetPay = annualIncome - annualDeduction;
+    const annualIncome = annualTaxableGross;
+    // 住民税も含める
+    const annualDeductionTotal = annualSocialInsurance + annualIncomeTax + annualResidentTax + (additionalDeduction * 12);
+    const annualNetPay = annualIncome - annualDeductionTotal;
 
-    // ふるさと納税上限額（その他支給・控除は考慮しない）
-    const furusatoAnnualIncome = totalGross * 12 + (baseSalaryExcludingTransport * bonusMonths);
+    // ふるさと納税上限額（その他支給・控除も考慮する）
+    const furusatoAnnualIncome = annualTaxableGross;
     const furusato = calculateFurusatoLimit(furusatoAnnualIncome, annualSocialInsurance);
     const deductionAmount = Math.max(0, furusato.donationLimit - 2000);
 
     // ---------------------------
     // 表示更新
     // ---------------------------
-    document.getElementById('totalGross').textContent = formatCurrency(totalGross + additionalPayment);
-    document.getElementById('healthInsurance').textContent = formatCurrency(-healthInsurance);
-    document.getElementById('nursingInsurance').textContent = formatCurrency(-nursingInsurance);
-    document.getElementById('pension').textContent = formatCurrency(-pension);
-    document.getElementById('employmentInsurance').textContent = formatCurrency(-employmentInsurance);
-    document.getElementById('incomeTax').textContent = formatCurrency(-monthlyIncomeTax);
-    document.getElementById('residentTax').textContent = formatCurrency(-monthlyResidentTax);
+    document.getElementById('totalGross').textContent = formatCurrency(totalGross) + '円';
+    document.getElementById('healthInsurance').textContent = '-' + formatCurrency(healthInsurance) + '円';
+    document.getElementById('nursingInsurance').textContent = '-' + formatCurrency(nursingInsurance) + '円';
+    document.getElementById('pension').textContent = '-' + formatCurrency(pension) + '円';
+    document.getElementById('employmentInsurance').textContent = '-' + formatCurrency(employmentInsurance) + '円';
+    document.getElementById('incomeTax').textContent = '-' + formatCurrency(monthlyIncomeTax) + '円';
+    document.getElementById('residentTax').textContent = '-' + formatCurrency(monthlyResidentTax) + '円';
 
-    // その他支給・控除の表示
+    // その他支給の表示
     const additionalPaymentRow = document.getElementById('additionalPaymentRow');
-    const additionalDeductionRow = document.getElementById('additionalDeductionRow');
 
     if (additionalPayment > 0) {
         additionalPaymentRow.style.display = 'flex';
-        document.getElementById('additionalPaymentDisplay').textContent = '+' + formatCurrency(additionalPayment);
+        document.getElementById('additionalPaymentDisplay').textContent = '+' + formatCurrency(additionalPayment) + '円';
     } else {
         additionalPaymentRow.style.display = 'none';
     }
 
+    const additionalDeductionRow = document.getElementById('additionalDeductionRow');
     if (additionalDeduction > 0) {
         additionalDeductionRow.style.display = 'flex';
-        document.getElementById('additionalDeductionDisplay').textContent = formatCurrency(-additionalDeduction);
+        document.getElementById('additionalDeductionDisplay').textContent = '-' + formatCurrency(additionalDeduction) + '円';
     } else {
         additionalDeductionRow.style.display = 'none';
     }
 
-    document.getElementById('netPay').textContent = formatCurrency(netPay);
+    document.getElementById('netPay').textContent = formatCurrency(netPay) + '円';
+
+    // 月間残業時間の内訳表示
+    const monthlyOvertimeHoursDisplay = document.getElementById('monthlyOvertimeHours');
+    if (monthlyOvertimeHoursDisplay) {
+        // 小数点第1位まで表示（例: 15.5H）
+        const hoursText = overtimeHours > 0 ? overtimeHours.toFixed(1).replace(/\.0$/, '') : '0';
+        monthlyOvertimeHoursDisplay.textContent = `${hoursText}H/月`;
+    }
 
     // 年間予想額の表示更新（円マーク削除: formatManYenが '万' を返すようになったためそのまま適用）
     document.getElementById('annualIncome').textContent = formatManYen(annualIncome);
-    document.getElementById('annualDeduction').textContent = formatManYen(annualDeduction);
+    document.getElementById('annualDeduction').textContent = formatManYen(annualDeductionTotal);
     document.getElementById('annualNetPay').textContent = formatManYen(annualNetPay);
 
     // ふるさと納税（コンパクト表示）
@@ -397,31 +422,7 @@ function calculate() {
     updateChart(totalPayment, transportAllowance, overtimePay, overtimePeriod, bonusMonths, additionalPayment, additionalDeduction);
 }
 
-// ---------------------------
-// 数値のフォーマット（カンマ区切り）
-function formatCurrency(number) {
-    return new Intl.NumberFormat('ja-JP').format(number);
-}
 
-// 万円単位での表示（円なし）
-function formatManYen(number) {
-    const manYen = Math.round(number / 10000);
-    return new Intl.NumberFormat('ja-JP').format(manYen) + '万';
-}
-
-// -----------------------------------------------------
-// イベントリスナー
-// -----------------------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    // Input event listeners
-    const inputs = document.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.addEventListener('input', calculate);
-    });
-
-    // Initial calculation
-    calculate();
-});
 
 // -----------------------------------------------------
 // グラフ関連ロジック (Chart.js)
@@ -447,15 +448,16 @@ function updateChart(basePayment, transportAllowance, overtimePay, overtimePerio
 
         // その月の残業代を判定
         let currentOvertimePay = 0;
-        if (overtimePeriod === 'none') {
-            currentOvertimePay = 0;
-        } else if (overtimePeriod === 'first-half') {
-            if (month >= 1 && month <= 6) currentOvertimePay = overtimePay;
-        } else if (overtimePeriod === 'second-half') {
-            if (month >= 7 && month <= 12) currentOvertimePay = overtimePay;
-        } else {
-            // 特定月のみ
-            if (month == overtimePeriod) currentOvertimePay = overtimePay;
+        if (overtimePeriod === 'all') {
+            currentOvertimePay = overtimePay;
+        } else if (overtimePeriod === 'q1' && month >= 1 && month <= 3) {
+            currentOvertimePay = overtimePay;
+        } else if (overtimePeriod === 'q2' && month >= 4 && month <= 6) {
+            currentOvertimePay = overtimePay;
+        } else if (overtimePeriod === 'q3' && month >= 7 && month <= 9) {
+            currentOvertimePay = overtimePay;
+        } else if (overtimePeriod === 'q4' && month >= 10 && month <= 12) {
+            currentOvertimePay = overtimePay;
         }
 
         // ボーナス加算
@@ -596,8 +598,10 @@ function generateAdvice(totalPayment, overtimePay, overtimeHours, overtimePeriod
         const annualIncrease = Math.round(monthlySocialInsuranceDiff * 12);
 
         if (isAprilToJunePeriod(overtimePeriod) && gradeIncrease > 0) {
-            const hoursDisplay = Math.floor(overtimeHours) + '時間' +
-                (overtimeHours % 1 > 0 ? Math.round((overtimeHours % 1) * 60) + '分' : '');
+            // 月間の時間に変換して表示 (dailyHours * 20)
+            const monthlyHours = overtimeHours;
+            const hoursDisplay = Math.floor(monthlyHours) + '時間' +
+                (monthlyHours % 1 > 0 ? Math.round((monthlyHours % 1) * 60) + '分' : '');
 
             adviceText.innerHTML = `
                  4〜6月に残業が <strong>${hoursDisplay}</strong> 以上続くと、
@@ -644,7 +648,8 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('change', calculate);
 
         // 特定の入力欄でフォーカスが外れた時に計算結果に置き換える
-        if (input.id === 'totalPayment' || input.id === 'transportAllowance') {
+        if (input.id === 'totalPayment' || input.id === 'transportAllowance' ||
+            input.id === 'additionalPayment' || input.id === 'additionalDeduction') {
             input.addEventListener('blur', (e) => {
                 const result = evaluateExpression(e.target.value);
                 if (result > 0) {
