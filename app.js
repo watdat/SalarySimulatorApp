@@ -1,661 +1,509 @@
+/**
+ * Salary Simulator - Refactored Main Script
+ * Version: 2026.1 (FY2026 / R8 Support)
+ * Regions: Osaka, Tokyo, Hyogo, Kyoto
+ */
+
 // ========================================
-// 定数: 2025年度 大阪・協会けんぽ
+// 1. Initial Configuration & Rates
 // ========================================
-const RATES = {
-    healthInsurance: 0.0512,      // 健康保険 (大阪) 自己負担 5.12%
-    nursingInsurance: 0.00795,    // 介護保険 (40歳以上のみ) 0.795%
-    pension: 0.0915,              // 厚生年金 9.15%
-    employmentInsurance: 0.0055,  // 雇用保険 0.55% (2025年改正後)
-    residentTax: 0.10,            // 住民税 10%
-    residentTaxFixed: 5300,       // 住民税 均等割 (大阪市)
-    overtimeMultiplier: 1.25,     // 残業割増率 25%
-    monthlyWorkHours: 160,        // 月の所定労働時間（概算）
+const SALARY_CONFIG = {
+    RATES: {
+        nursingInsurance: 0.0081,    // Nursing care insurance (over 40)
+        childSupport: 0.00115,       // Child-rearing support money (New in 2026)
+        pension: 0.0915,             // Employees' pension insurance
+        employmentInsurance: 0.005,  // Employment insurance (FY2026 rate)
+        residentTax: 0.10,           // Income-based resident tax (10%)
+        residentTaxFixed: 5300,      // Per-capita resident tax (Osaka city ref)
+        overtimeMultiplier: 1.25,    // Standard overtime multiplier
+        monthlyWorkHours: 160        // Presumed monthly work hours
+    },
+
+    // Kyokai Kenpo Health Insurance Rates by Prefecture (FY2026)
+    REGION_RATES: {
+        osaka: 0.05065,  // Total 10.13%
+        tokyo: 0.04925,  // Total 9.85%
+        hyogo: 0.05060,  // Total 10.12%
+        kyoto: 0.04945   // Total 9.89%
+    },
+
+    // Standard Remuneration Grades (Monthly Salary Table)
+    STANDARD_REMUNERATION_GRADES: [
+        { min: 0, max: 63000, grade: 58000 },
+        { min: 63000, max: 73000, grade: 68000 },
+        { min: 73000, max: 83000, grade: 78000 },
+        { min: 83000, max: 93000, grade: 88000 },
+        { min: 93000, max: 101000, grade: 98000 },
+        { min: 101000, max: 107000, grade: 104000 },
+        { min: 107000, max: 114000, grade: 110000 },
+        { min: 114000, max: 122000, grade: 118000 },
+        { min: 122000, max: 130000, grade: 126000 },
+        { min: 130000, max: 138000, grade: 134000 },
+        { min: 138000, max: 146000, grade: 142000 },
+        { min: 146000, max: 155000, grade: 150000 },
+        { min: 155000, max: 165000, grade: 160000 },
+        { min: 165000, max: 175000, grade: 170000 },
+        { min: 175000, max: 185000, grade: 180000 },
+        { min: 185000, max: 195000, grade: 190000 },
+        { min: 195000, max: 210000, grade: 200000 },
+        { min: 210000, max: 230000, grade: 220000 },
+        { min: 230000, max: 250000, grade: 240000 },
+        { min: 250000, max: 270000, grade: 260000 },
+        { min: 270000, max: 290000, grade: 280000 },
+        { min: 290000, max: 310000, grade: 300000 },
+        { min: 310000, max: 330000, grade: 320000 },
+        { min: 330000, max: 350000, grade: 340000 },
+        { min: 350000, max: 370000, grade: 360000 },
+        { min: 370000, max: 395000, grade: 380000 },
+        { min: 395000, max: 425000, grade: 410000 },
+        { min: 425000, max: 455000, grade: 440000 },
+        { min: 455000, max: 485000, grade: 470000 },
+        { min: 485000, max: 515000, grade: 500000 },
+        { min: 515000, max: 545000, grade: 530000 },
+        { min: 545000, max: 575000, grade: 560000 },
+        { min: 575000, max: 605000, grade: 590000 },
+        { min: 605000, max: 635000, grade: 620000 },
+        { min: 635000, max: 665000, grade: 650000 },
+        { min: 665000, max: 695000, grade: 680000 },
+        { min: 695000, max: 730000, grade: 710000 },
+        { min: 730000, max: 770000, grade: 750000 },
+        { min: 770000, max: 810000, grade: 790000 },
+        { min: 810000, max: 855000, grade: 830000 },
+        { min: 855000, max: 905000, grade: 880000 },
+        { min: 905000, max: 955000, grade: 930000 },
+        { min: 955000, max: 1005000, grade: 980000 },
+        { min: 1005000, max: 1055000, grade: 1030000 },
+        { min: 1055000, max: 1115000, grade: 1090000 },
+        { min: 1115000, max: 1175000, grade: 1150000 },
+        { min: 1175000, max: 1235000, grade: 1210000 },
+        { min: 1235000, max: 1295000, grade: 1270000 },
+        { min: 1295000, max: 1355000, grade: 1330000 },
+        { min: 1355000, max: Infinity, grade: 1390000 }
+    ],
+
+    // Quick Tax Table (Including 2.1% reconstruction tax)
+    INCOME_TAX_TABLE: [
+        { min: 0, max: 1950000, rate: 0.05, deduction: 0 },
+        { min: 1950000, max: 3300000, rate: 0.10, deduction: 97500 },
+        { min: 3300000, max: 6950000, rate: 0.20, deduction: 427500 },
+        { min: 6950000, max: 9000000, rate: 0.23, deduction: 636000 },
+        { min: 9000000, max: 18000000, rate: 0.33, deduction: 1536000 },
+        { min: 18000000, max: 40000000, rate: 0.40, deduction: 2796000 },
+        { min: 40000000, max: Infinity, rate: 0.45, deduction: 4796000 }
+    ]
 };
 
-// 標準報酬月額テーブル (簡易版、主要な等級のみ)
-const STANDARD_REMUNERATION_GRADES = [
-    { min: 0, max: 63000, grade: 58000 },
-    { min: 63000, max: 73000, grade: 68000 },
-    { min: 73000, max: 83000, grade: 78000 },
-    { min: 83000, max: 93000, grade: 88000 },
-    { min: 93000, max: 101000, grade: 98000 },
-    { min: 101000, max: 107000, grade: 104000 },
-    { min: 107000, max: 114000, grade: 110000 },
-    { min: 114000, max: 122000, grade: 118000 },
-    { min: 122000, max: 130000, grade: 126000 },
-    { min: 130000, max: 138000, grade: 134000 },
-    { min: 138000, max: 146000, grade: 142000 },
-    { min: 146000, max: 155000, grade: 150000 },
-    { min: 155000, max: 165000, grade: 160000 },
-    { min: 165000, max: 175000, grade: 170000 },
-    { min: 175000, max: 185000, grade: 180000 },
-    { min: 185000, max: 195000, grade: 190000 },
-    { min: 195000, max: 210000, grade: 200000 },
-    { min: 210000, max: 230000, grade: 220000 },
-    { min: 230000, max: 250000, grade: 240000 },
-    { min: 250000, max: 270000, grade: 260000 },
-    { min: 270000, max: 290000, grade: 280000 },
-    { min: 290000, max: 310000, grade: 300000 },
-    { min: 310000, max: 330000, grade: 320000 },
-    { min: 330000, max: 350000, grade: 340000 },
-    { min: 350000, max: 370000, grade: 360000 },
-    { min: 370000, max: 395000, grade: 380000 },
-    { min: 395000, max: 425000, grade: 410000 },
-    { min: 425000, max: 455000, grade: 440000 },
-    { min: 455000, max: 485000, grade: 470000 },
-    { min: 485000, max: 515000, grade: 500000 },
-    { min: 515000, max: 545000, grade: 530000 },
-    { min: 545000, max: 575000, grade: 560000 },
-    { min: 575000, max: 605000, grade: 590000 },
-    { min: 605000, max: 635000, grade: 620000 },
-    { min: 635000, max: 665000, grade: 650000 },
-    { min: 665000, max: 695000, grade: 680000 },
-    { min: 695000, max: 730000, grade: 710000 },
-    { min: 730000, max: 770000, grade: 750000 },
-    { min: 770000, max: 810000, grade: 790000 },
-    { min: 810000, max: 855000, grade: 830000 },
-    { min: 855000, max: 905000, grade: 880000 },
-    { min: 905000, max: 955000, grade: 930000 },
-    { min: 955000, max: 1005000, grade: 980000 },
-    { min: 1005000, max: 1055000, grade: 1030000 },
-    { min: 1055000, max: 1115000, grade: 1090000 },
-    { min: 1115000, max: 1175000, grade: 1150000 },
-    { min: 1175000, max: 1235000, grade: 1210000 },
-    { min: 1235000, max: 1295000, grade: 1270000 },
-    { min: 1295000, max: 1355000, grade: 1330000 },
-    { min: 1355000, max: Infinity, grade: 1390000 },
-];
-
-// 所得税速算表 (復興特別所得税 2.1% 含む)
-const INCOME_TAX_TABLE = [
-    { min: 0, max: 1950000, rate: 0.05, deduction: 0 },
-    { min: 1950000, max: 3300000, rate: 0.10, deduction: 97500 },
-    { min: 3300000, max: 6950000, rate: 0.20, deduction: 427500 },
-    { min: 6950000, max: 9000000, rate: 0.23, deduction: 636000 },
-    { min: 9000000, max: 18000000, rate: 0.33, deduction: 1536000 },
-    { min: 18000000, max: 40000000, rate: 0.40, deduction: 2796000 },
-    { min: 40000000, max: Infinity, rate: 0.45, deduction: 4796000 },
-];
-
 // ========================================
-// ユーティリティ関数
+// 2. Formatting & Logic Utilities
 // ========================================
-function formatCurrency(number) {
-    return new Intl.NumberFormat('ja-JP').format(number);
-}
+const Utils = {
+    /** Formats a number to JP Currency string. */
+    formatCurrency: (num) => new Intl.NumberFormat('ja-JP').format(num || 0),
 
-function formatManYen(amount) {
-    const manYen = Math.round(amount / 10000);
-    return `${manYen}万円`;
-}
-
-function formatManYenDecimal(amount) {
-    const manYen = amount / 10000;
-    return `約${manYen.toFixed(1)}万円`;
-}
-
-/**
- * 文字列を受け取り、数値計算結果を返すヘルパー
- * 「+」「-」「*」「/」に対応
- */
-function evaluateExpression(str) {
-    if (!str) return 0;
-    // 全角記号を半角に変換、不要な文字を除去
-    let normalized = str.toString()
-        .replace(/＋/g, '+')
-        .replace(/－/g, '-')
-        .replace(/＊/g, '*')
-        .replace(/／/g, '/')
-        .replace(/[^-0-9+*/.]/g, ''); // 数字と記号以外を除去
-
-    if (!normalized) return 0;
-
-    try {
-        // 安全に計算するために Function を使用
-        // 直接 eval するよりは限定的
-        const result = new Function(`return (${normalized})`)();
-        return isFinite(result) ? Math.round(result) : 0;
-    } catch (e) {
-        // 計算エラー時は数値のみを抽出して返す（フォールバック）
-        const fallback = parseInt(normalized.replace(/[^0-9]/g, '')) || 0;
-        return fallback;
-    }
-}
-
-function getStandardRemuneration(monthlySalary) {
-    for (const grade of STANDARD_REMUNERATION_GRADES) {
-        if (monthlySalary >= grade.min && monthlySalary < grade.max) {
-            return grade.grade;
+    /** Formats a number to "Million Yen" string. */
+    formatManYen: (amt) => `${Math.round((amt || 0) / 10000)}万円`,
+    
+    /** Evaluates string expressions securely (e.g. "200000 + 10000"). */
+    evaluateExpression: (str) => {
+        if (!str) return 0;
+        let normalized = str.toString()
+            .replace(/＋/g, '+').replace(/－/g, '-').replace(/＊/g, '*').replace(/／/g, '/')
+            .replace(/[^-0-9+*/.]/g, ''); 
+        if (!normalized) return 0;
+        try {
+            const result = new Function(`return (${normalized})`)();
+            return isFinite(result) ? Math.round(result) : 0;
+        } catch (e) {
+            return parseInt(normalized.replace(/[^0-9]/g, '')) || 0;
         }
     }
-    return STANDARD_REMUNERATION_GRADES[STANDARD_REMUNERATION_GRADES.length - 1].grade;
-}
+};
 
-function getGradeIndex(monthlySalary) {
-    for (let i = 0; i < STANDARD_REMUNERATION_GRADES.length; i++) {
-        const grade = STANDARD_REMUNERATION_GRADES[i];
-        if (monthlySalary >= grade.min && monthlySalary < grade.max) {
-            return i;
-        }
+// ========================================
+// 3. Calculation Engine Module
+// ========================================
+class SalaryCalculator {
+    constructor(config) {
+        this.config = config;
     }
-    return STANDARD_REMUNERATION_GRADES.length - 1;
-}
 
-// 日次の残業分（数値）を、月次の時間数（小数、20日分と仮定）に変換
-function parseOvertimeHours(dailyMinutes) {
-    const mins = parseInt(dailyMinutes) || 0;
-    const dailyHours = mins / 60;
-    return dailyHours * 20; // 月20日稼働と仮定
-}
-
-// 残業代を計算（時間から）
-function calculateOvertimePay(baseSalaryExcludingTransport, overtimeHours) {
-    if (overtimeHours <= 0) return 0;
-    const hourlyRate = baseSalaryExcludingTransport / RATES.monthlyWorkHours;
-    const overtimeRate = hourlyRate * RATES.overtimeMultiplier;
-    return Math.round(overtimeRate * overtimeHours);
-}
-
-// 給与所得控除を計算
-function calculateSalaryDeduction(annualIncome) {
-    if (annualIncome <= 1625000) return 550000;
-    if (annualIncome <= 1800000) return annualIncome * 0.40 - 100000;
-    if (annualIncome <= 3600000) return annualIncome * 0.30 + 80000;
-    if (annualIncome <= 6600000) return annualIncome * 0.20 + 440000;
-    if (annualIncome <= 8500000) return annualIncome * 0.10 + 1100000;
-    return 1950000;
-}
-
-// 所得税を計算
-function calculateIncomeTax(taxableIncome) {
-    if (taxableIncome <= 0) return 0;
-    for (const bracket of INCOME_TAX_TABLE) {
-        if (taxableIncome > bracket.min && taxableIncome <= bracket.max) {
-            const baseTax = taxableIncome * bracket.rate - bracket.deduction;
-            return baseTax * 1.021; // 復興特別所得税 2.1%
+    /** Finds the standard monthly remuneration grade. */
+    getStandardRemuneration(monthlySalary) {
+        const grades = this.config.STANDARD_REMUNERATION_GRADES;
+        for (const grade of grades) {
+            if (monthlySalary >= grade.min && monthlySalary < grade.max) return grade.grade;
         }
+        return grades[grades.length - 1].grade;
     }
-    return 0;
-}
 
-// ふるさと納税の控除上限額を計算（修正版）
-function calculateFurusatoLimit(annualIncome, annualSocialInsurance) {
-    // 給与所得控除後の金額
-    const salaryDeduction = calculateSalaryDeduction(annualIncome);
-    const incomeAfterSalaryDeduction = annualIncome - salaryDeduction;
+    /** Calculates income tax based on the taxable income brackets. */
+    calculateIncomeTax(taxableIncome) {
+        if (taxableIncome <= 0) return 0;
+        for (const bracket of this.config.INCOME_TAX_TABLE) {
+            if (taxableIncome > bracket.min && taxableIncome <= bracket.max) {
+                const baseTax = taxableIncome * bracket.rate - bracket.deduction;
+                return baseTax * 1.021; // Inc. reconstruction tax
+            }
+        }
+        return 0;
+    }
 
-    // 所得控除の合計（社会保険料控除 + 基礎控除）
-    // 住民税の基礎控除は43万円
-    const basicDeductionForResident = 430000;
-    const totalDeductions = annualSocialInsurance + basicDeductionForResident;
+    /** Standard deduction table for salary income. */
+    calculateSalaryDeduction(annualIncome) {
+        if (annualIncome <= 1625000) return 550000;
+        if (annualIncome <= 1800000) return annualIncome * 0.40 - 100000;
+        if (annualIncome <= 3600000) return annualIncome * 0.30 + 80000;
+        if (annualIncome <= 6600000) return annualIncome * 0.20 + 440000;
+        if (annualIncome <= 8500000) return annualIncome * 0.10 + 1100000;
+        return 1950000;
+    }
 
-    // 課税所得（住民税計算用）
-    const taxableIncomeForResident = Math.max(0, incomeAfterSalaryDeduction - totalDeductions);
+    /** Calculates presumed monthly overtime pay. */
+    calculateOvertimePay(baseSalary, dailyMinutes) {
+        const monthlyHours = (dailyMinutes / 60) * 20; 
+        const hourlyRate = baseSalary / this.config.RATES.monthlyWorkHours;
+        return Math.round(hourlyRate * this.config.RATES.overtimeMultiplier * monthlyHours);
+    }
 
-    // 住民税所得割額（10%）
-    const residentTaxIncomePortion = taxableIncomeForResident * 0.10;
+    /** Calculates all social insurance deductions for a given month. */
+    calculateSocialInsurance(grossForSI, ageGroup, region) {
+        const stdRemun = this.getStandardRemuneration(grossForSI);
+        const rates = this.config.RATES;
+        const regionRate = this.config.REGION_RATES[region] || this.config.REGION_RATES.osaka;
 
-    // 所得税の課税所得（所得税の基礎控除は48万円）
-    const basicDeductionForIncome = 480000;
-    const taxableIncomeForIncomeTax = Math.max(0, incomeAfterSalaryDeduction - annualSocialInsurance - basicDeductionForIncome);
+        const health = Math.round(stdRemun * regionRate);
+        const pension = Math.round(stdRemun * rates.pension);
+        const nursing = (ageGroup === 'over40') ? Math.round(stdRemun * rates.nursingInsurance) : 0;
+        const childSupport = Math.round(stdRemun * rates.childSupport);
+        
+        return { health, pension, nursing, childSupport, total: health + pension + nursing + childSupport };
+    }
 
-    // 所得税率を判定
-    let incomeTaxRate = 0.05;
-    if (taxableIncomeForIncomeTax > 1950000) incomeTaxRate = 0.10;
-    if (taxableIncomeForIncomeTax > 3300000) incomeTaxRate = 0.20;
-    if (taxableIncomeForIncomeTax > 6950000) incomeTaxRate = 0.23;
-    if (taxableIncomeForIncomeTax > 9000000) incomeTaxRate = 0.33;
-    if (taxableIncomeForIncomeTax > 18000000) incomeTaxRate = 0.40;
-    if (taxableIncomeForIncomeTax > 40000000) incomeTaxRate = 0.45;
+    /** Estimates "Furusato Nouzei" donation limits. */
+    calculateFurusatoLimit(annualIncome, annualSI) {
+        const salaryDed = this.calculateSalaryDeduction(annualIncome);
+        const incomeAfterDed = annualIncome - salaryDed;
+        const taxableResident = Math.max(0, incomeAfterDed - annualSI - 430000); // 430k basic ded for res tax
+        const resTaxIncomePortion = taxableResident * 0.10;
+        const taxableIT = Math.max(0, incomeAfterDed - annualSI - 480000); // 480k basic ded for income tax
+        
+        let itRate = 0.05;
+        if (taxableIT > 1950000) itRate = 0.10;
+        if (taxableIT > 3300000) itRate = 0.20;
+        if (taxableIT > 6950000) itRate = 0.23;
+        if (taxableIT > 9000000) itRate = 0.33;
+        if (taxableIT > 18000000) itRate = 0.40;
+        if (taxableIT > 40000000) itRate = 0.45;
 
-    // ふるさと納税上限額の計算式
-    // 上限額 = (住民税所得割額 × 20%) / (100% - 住民税率10% - 所得税率 × 復興税率1.021) + 2,000円
-    const denominator = 1 - 0.10 - (incomeTaxRate * 1.021);
-    const specialDeductionLimit = residentTaxIncomePortion * 0.20;
-    const donationLimit = (specialDeductionLimit / denominator) + 2000;
+        const denominator = 1 - 0.10 - (itRate * 1.021);
+        const limit = (resTaxIncomePortion * 0.20 / denominator) + 2000;
 
-    // 返礼品購入可能額 = 上限額の約30%
-    const returnGiftValue = donationLimit * 0.30;
-
-    return {
-        donationLimit: Math.floor(donationLimit / 100) * 100, // 100円単位で切り捨て
-        returnGiftValue: Math.floor(returnGiftValue / 100) * 100
-    };
-}
-
-// 4-6月に該当するかチェック（4-6月が含まれる期間か）
-function isAprilToJunePeriod(period) {
-    return period === 'all' || period === 'q2';
-}
-
-// 社会保険料の計算（簡易版）
-function calculateSocialInsurance(monthlyGross, age) {
-    const standardRemuneration = getStandardRemuneration(monthlyGross);
-    const health = Math.round(standardRemuneration * RATES.healthInsurance);
-    const pension = Math.round(standardRemuneration * RATES.pension);
-    const employment = Math.round(monthlyGross * RATES.employmentInsurance);
-    const nursing = (age >= 40) ? Math.round(standardRemuneration * RATES.nursingInsurance) : 0;
-    return health + pension + employment + nursing;
-}
-
-// 住民税の計算（簡易版）
-function calculateResidentTax(annualTaxableIncome) {
-    const salaryDeduction = calculateSalaryDeduction(annualTaxableIncome);
-    const basicDeduction = 430000; // 住民税の基礎控除
-    const taxableIncome = Math.max(0, annualTaxableIncome - salaryDeduction - basicDeduction);
-    return Math.round(taxableIncome * RATES.residentTax) + RATES.residentTaxFixed;
+        return {
+            donationLimit: Math.floor(limit / 100) * 100,
+            deductionAmount: Math.max(0, Math.floor(limit / 100) * 100 - 2000)
+        };
+    }
 }
 
 // ========================================
-// メイン計算ロジック
+// 4. UI Manager Module
 // ========================================
-function calculate() {
-    // 入力値を取得（計算式に対応）
-    const totalPayment = evaluateExpression(document.getElementById('totalPayment').value);
-    const transportAllowance = evaluateExpression(document.getElementById('transportAllowance').value);
-    const overtimeMinutes = document.getElementById('overtimeHours').value;
-    const overtimePeriod = document.getElementById('overtimePeriod').value;
-    const bonusMonths = parseFloat(document.getElementById('bonusMonths').value) || 0;
-    const ageGroup = document.getElementById('age').value;
-    const additionalPayment = evaluateExpression(document.getElementById('additionalPayment').value);
-    const additionalDeduction = evaluateExpression(document.getElementById('additionalDeduction').value);
-
-    const totalAdditionalPayment = additionalPayment;
-
-    // 残業時間を解析
-    const overtimeHours = parseOvertimeHours(overtimeMinutes);
-
-    // 基本給（交通費除く）＝ 支払総額入力値
-    const baseSalaryExcludingTransport = totalPayment;
-
-    // 残業代を計算
-    const overtimePay = calculateOvertimePay(baseSalaryExcludingTransport, overtimeHours);
-
-    // 月額総支給額（支払総額 + 交通費 + 残業代 + その他支給）
-    // ※ その他支給も社会保険料・税金の計算対象に含める（方法B）
-    const totalGross = totalPayment + transportAllowance + overtimePay + totalAdditionalPayment;
-
-    // 標準報酬月額 (社会保険料計算用)
-    const standardRemuneration = getStandardRemuneration(totalGross);
-
-    // ---------------------------
-    // 社会保険料 (月額)
-    // ---------------------------
-    const healthInsurance = Math.round(standardRemuneration * RATES.healthInsurance);
-    const nursingInsurance = ageGroup === 'over40'
-        ? Math.round(standardRemuneration * RATES.nursingInsurance)
-        : 0;
-    const pension = Math.round(standardRemuneration * RATES.pension);
-    const employmentInsurance = Math.round(totalGross * RATES.employmentInsurance);
-
-    const totalSocialInsurance = healthInsurance + nursingInsurance + pension + employmentInsurance;
-
-    // ---------------------------
-    // 税金 (月額概算)
-    // ---------------------------
-    // 課税対象額 = 総支給額 - 交通費
-    const taxableGross = totalGross - transportAllowance;
-
-    // 年収ベースで計算
-    // 繁忙時期に応じた年間残業代の計算
-    let annualOvertimePay = 0;
-    if (overtimePeriod === 'all') {
-        annualOvertimePay = overtimePay * 12;
-    } else if (overtimePeriod === 'q1' || overtimePeriod === 'q2' || overtimePeriod === 'q3' || overtimePeriod === 'q4') {
-        annualOvertimePay = overtimePay * 3; // 各四半期は3ヶ月
+class UIManager {
+    constructor() {
+        this.elements = {};
+        this.initElementCache();
     }
 
-    const annualTaxableGross = (totalPayment + transportAllowance + totalAdditionalPayment) * 12 + annualOvertimePay + (baseSalaryExcludingTransport * bonusMonths);
-    const salaryDeduction = calculateSalaryDeduction(annualTaxableGross);
-    const basicDeduction = 480000;
-
-    // 社会保険料の年間合計（繁忙時期による変動を考慮）
-    // ※ 簡易化のため、4-6月の残業が社会保険料に反映されるロジックは advice で表現し、
-    //  ここでは「繁忙期の残業代を含んだ月」と「含まない月」の合計として計算する
-    const standardRemunerationWithOvertime = getStandardRemuneration(totalGross);
-    const standardRemunerationBase = getStandardRemuneration(totalPayment + transportAllowance);
-
-    const siRate = RATES.healthInsurance + RATES.pension + (ageGroup === 'over40' ? RATES.nursingInsurance : 0);
-
-    let annualSocialInsurance = 0;
-    if (overtimePeriod === 'all') {
-        annualSocialInsurance = standardRemunerationWithOvertime * siRate * 12;
-    } else if (overtimePeriod === 'q1' || overtimePeriod === 'q2' || overtimePeriod === 'q3' || overtimePeriod === 'q4') {
-        annualSocialInsurance = (standardRemunerationWithOvertime * siRate * 3) + (standardRemunerationBase * siRate * 9);
-    } else {
-        annualSocialInsurance = standardRemunerationBase * siRate * 12;
+    /** Caches all interactive DOM elements. */
+    initElementCache() {
+        const ids = [
+            'totalPayment', 'transportAllowance', 'overtimeHours', 'overtimePeriod',
+            'bonusMonths', 'age', 'additionalPayment', 'additionalDeduction',
+            'totalGross', 'healthInsurance', 'nursingInsurance', 'pension', 'childSupport', 'employmentInsurance',
+            'incomeTax', 'residentTax', 'additionalPaymentRow', 'additionalPaymentDisplay',
+            'additionalDeductionRow', 'additionalDeductionDisplay', 'netPay',
+            'monthlyOvertimeHours', 'annualIncome', 'annualDeduction', 'annualNetPay',
+            'furusatoAmount', 'adviceCard', 'adviceText', 'monthlyChart'
+        ];
+        ids.forEach(id => {
+            this.elements[id] = document.getElementById(id);
+        });
+        this.regionSelect = document.getElementById('regionSelect');
     }
 
-    // 雇用保険料（実際の支払額にかかる）
-    const annualEmploymentInsurance = (annualTaxableGross) * RATES.employmentInsurance;
-    annualSocialInsurance += annualEmploymentInsurance;
-
-    const taxableIncome = Math.max(0, annualTaxableGross - salaryDeduction - basicDeduction - annualSocialInsurance);
-
-    const annualIncomeTax = calculateIncomeTax(taxableIncome);
-    const monthlyIncomeTax = Math.round(annualIncomeTax / 12);
-
-    const annualResidentTax = Math.max(0, taxableIncome * RATES.residentTax) + RATES.residentTaxFixed;
-    const monthlyResidentTax = Math.round(annualResidentTax / 12);
-
-    // ---------------------------
-    // 月額手取り
-    // ---------------------------
-    const totalDeduction = totalSocialInsurance + monthlyIncomeTax + monthlyResidentTax + additionalDeduction;
-    const netPay = totalGross - totalDeduction;
-
-    // ---------------------------
-    // 年間計算
-    // ---------------------------
-    const annualIncome = annualTaxableGross;
-    // 住民税も含める
-    const annualDeductionTotal = annualSocialInsurance + annualIncomeTax + annualResidentTax + (additionalDeduction * 12);
-    const annualNetPay = annualIncome - annualDeductionTotal;
-
-    // ふるさと納税上限額（その他支給・控除も考慮する）
-    const furusatoAnnualIncome = annualTaxableGross;
-    const furusato = calculateFurusatoLimit(furusatoAnnualIncome, annualSocialInsurance);
-    const deductionAmount = Math.max(0, furusato.donationLimit - 2000);
-
-    // ---------------------------
-    // 表示更新
-    // ---------------------------
-    document.getElementById('totalGross').textContent = formatCurrency(totalGross) + '円';
-    document.getElementById('healthInsurance').textContent = '-' + formatCurrency(healthInsurance) + '円';
-    document.getElementById('nursingInsurance').textContent = '-' + formatCurrency(nursingInsurance) + '円';
-    document.getElementById('pension').textContent = '-' + formatCurrency(pension) + '円';
-    document.getElementById('employmentInsurance').textContent = '-' + formatCurrency(employmentInsurance) + '円';
-    document.getElementById('incomeTax').textContent = '-' + formatCurrency(monthlyIncomeTax) + '円';
-    document.getElementById('residentTax').textContent = '-' + formatCurrency(monthlyResidentTax) + '円';
-
-    // その他支給の表示
-    const additionalPaymentRow = document.getElementById('additionalPaymentRow');
-
-    if (additionalPayment > 0) {
-        additionalPaymentRow.style.display = 'flex';
-        document.getElementById('additionalPaymentDisplay').textContent = '+' + formatCurrency(additionalPayment) + '円';
-    } else {
-        additionalPaymentRow.style.display = 'none';
+    /** Aggregates current user inputs into a structured object. */
+    getInputs() {
+        const getVal = (id) => Utils.evaluateExpression(this.elements[id].value);
+        return {
+            totalPayment: getVal('totalPayment'),
+            transportAllowance: getVal('transportAllowance'),
+            overtimeMinutes: parseInt(this.elements.overtimeHours.value) || 0,
+            overtimePeriod: this.elements.overtimePeriod.value,
+            bonusMonths: parseFloat(this.elements.bonusMonths.value) || 0,
+            ageGroup: this.elements.age.value,
+            additionalPayment: getVal('additionalPayment'),
+            additionalDeduction: getVal('additionalDeduction')
+        };
     }
 
-    const additionalDeductionRow = document.getElementById('additionalDeductionRow');
-    if (additionalDeduction > 0) {
-        additionalDeductionRow.style.display = 'flex';
-        document.getElementById('additionalDeductionDisplay').textContent = '-' + formatCurrency(additionalDeduction) + '円';
-    } else {
-        additionalDeductionRow.style.display = 'none';
-    }
+    /** Updates the primary UI displays based on calculated results. */
+    updateDisplay(results) {
+        const el = this.elements;
+        const cur = Utils.formatCurrency;
 
-    document.getElementById('netPay').textContent = formatCurrency(netPay) + '円';
+        el.totalGross.textContent = `${cur(results.monthly.totalGross)}円`;
+        el.healthInsurance.textContent = `-${cur(results.monthly.si.health)}円`;
+        el.nursingInsurance.textContent = `-${cur(results.monthly.si.nursing)}円`;
+        el.pension.textContent = `-${cur(results.monthly.si.pension)}円`;
+        el.childSupport.textContent = `-${cur(results.monthly.si.childSupport)}円`;
+        el.employmentInsurance.textContent = `-${cur(results.monthly.si.employment)}円`;
+        el.incomeTax.textContent = `-${cur(results.monthly.tax.income)}円`;
+        el.residentTax.textContent = `-${cur(results.monthly.tax.resident)}円`;
+        el.netPay.textContent = `${cur(results.monthly.netPay)}円`;
+        
+        // Show/Hide additional rows
+        const addPay = results.inputs.additionalPayment;
+        el.additionalPaymentDisplay.textContent = `+${cur(addPay)}円`;
 
-    // 月間残業時間の内訳表示
-    const monthlyOvertimeHoursDisplay = document.getElementById('monthlyOvertimeHours');
-    if (monthlyOvertimeHoursDisplay) {
-        // 小数点第1位まで表示（例: 15.5H）
-        const hoursText = overtimeHours > 0 ? overtimeHours.toFixed(1).replace(/\.0$/, '') : '0';
-        monthlyOvertimeHoursDisplay.textContent = `${hoursText}H/月`;
-    }
+        const addDed = results.inputs.additionalDeduction;
+        el.additionalDeductionDisplay.textContent = `-${cur(addDed)}円`;
 
-    // 年間予想額の表示更新（円マーク削除: formatManYenが '万' を返すようになったためそのまま適用）
-    document.getElementById('annualIncome').textContent = formatManYen(annualIncome);
-    document.getElementById('annualDeduction').textContent = formatManYen(annualDeductionTotal);
-    document.getElementById('annualNetPay').textContent = formatManYen(annualNetPay);
+        const otHours = (results.inputs.overtimeMinutes / 60) * 20;
+        el.monthlyOvertimeHours.textContent = `${otHours > 0 ? otHours.toFixed(1).replace(/\.0$/, '') : '0'}H/月`;
 
-    // ふるさと納税（コンパクト表示）
-    const furusatoDisplay = document.getElementById('furusatoAmount');
-    if (furusatoDisplay) {
-        // 返礼品購入可能額（円なし） + 上限額（円なし）
-        furusatoDisplay.innerHTML = `
-            ${formatCurrency(deductionAmount)} <span style="font-size:0.9em">（寄付金上限額 : ${formatCurrency(furusato.donationLimit)}）</span>
+        // Annual Summary
+        el.annualIncome.textContent = Utils.formatManYen(results.annual.income);
+        el.annualDeduction.textContent = Utils.formatManYen(results.annual.deduction);
+        el.annualNetPay.textContent = Utils.formatManYen(results.annual.netPay);
+
+        el.furusatoAmount.innerHTML = `
+            ${cur(results.furusato.deductionAmount)} <span style="font-size:0.9em">（寄付金上限額 : ${cur(results.furusato.donationLimit)}）</span>
         `;
     }
 
-    // ---------------------------
-    // アドバイス生成
-    // ---------------------------
-    // ---------------------------
-    generateAdvice(totalPayment, overtimePay, overtimeHours, overtimePeriod, totalGross);
-
-    // ---------------------------
-    // グラフ描画更新
-    // ---------------------------
-    updateChart(totalPayment, transportAllowance, overtimePay, overtimePeriod, bonusMonths, additionalPayment, additionalDeduction);
+    /** Updates the advice card theme and text. */
+    updateAdvice(advice) {
+        const el = this.elements;
+        el.adviceText.innerHTML = advice.text;
+        el.adviceCard.style.borderColor = advice.borderColor || 'rgba(0, 217, 255, 0.3)';
+        el.adviceCard.style.background = advice.background || 'linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(168, 85, 247, 0.1))';
+    }
 }
 
-
-
-// -----------------------------------------------------
-// グラフ関連ロジック (Chart.js)
-// -----------------------------------------------------
-let monthlyChart = null;
-
-function updateChart(basePayment, transportAllowance, overtimePay, overtimePeriod, bonusMonths, addPayment, addDeduction) {
-    const ctx = document.getElementById('monthlyChart');
-    if (!ctx) return; // 要素がない場合はスキップ
-
-    // 月ごとのデータを計算
-    const labels = [];
-    const netPayData = [];
-    const TaxData = [];
-
-    // ボーナス月を設定（仮に6月と12月に分割支給とする）
-    const bonusMonth1 = 6;
-    const bonusMonth2 = 12;
-    const bonusAmountPerTime = (basePayment * bonusMonths) / 2;
-
-    for (let month = 1; month <= 12; month++) {
-        labels.push(`${month}月`);
-
-        // その月の残業代を判定
-        let currentOvertimePay = 0;
-        if (overtimePeriod === 'all') {
-            currentOvertimePay = overtimePay;
-        } else if (overtimePeriod === 'q1' && month >= 1 && month <= 3) {
-            currentOvertimePay = overtimePay;
-        } else if (overtimePeriod === 'q2' && month >= 4 && month <= 6) {
-            currentOvertimePay = overtimePay;
-        } else if (overtimePeriod === 'q3' && month >= 7 && month <= 9) {
-            currentOvertimePay = overtimePay;
-        } else if (overtimePeriod === 'q4' && month >= 10 && month <= 12) {
-            currentOvertimePay = overtimePay;
-        }
-
-        // ボーナス加算
-        let currentBonus = 0;
-        if (bonusMonths > 0) {
-            if (month === bonusMonth1 || month === bonusMonth2) {
-                currentBonus = bonusAmountPerTime;
-            }
-        }
-
-        // 月総支給（基本 + 交通費 + 残業 + その他 + ボーナス）
-        const currentTotalGross = basePayment + transportAllowance + currentOvertimePay + addPayment + currentBonus;
-
-        // 社会保険・税金の簡易計算（ボーナス時は保険料も増えるが、ここでは近似計算とする）
-        // ※正確には賞与の社会保険料計算が必要だが、簡易的に「総支給に対する比率」で近似
-        //  月額計算の結果を利用して比率を出す
-        const baseGross = basePayment + overtimePay + addPayment; // 基準となる月
-        const baseDeduction = calculateSocialInsurance(baseGross, 40) + calculateIncomeTax(baseGross - calculateSocialInsurance(baseGross, 40), 0) + calculateResidentTax(baseGross * 12);
-
-        // ざっくり控除率 (ボーナス月は高くなる傾向があるが、ここでは平準化してシミュレーション)
-        // より正確には calculate() のロジックを月ごとに回すべきだが、パフォーマンス考慮し簡易化
-        // ただし手取り感を見せる目的なので、月次の計算ロジックを再利用するのがベスト
-
-        // --- 各月の正確な計算 ---
-        // 標準報酬月額の決定ロジックなどは複雑なため、
-        // 「その月の総支給額」に基づいて控除額を単独計算する
-        const si = calculateSocialInsurance(currentTotalGross, 40); // 年齢は一旦40歳未満固定扱い（簡易）
-        const it = calculateIncomeTax(currentTotalGross - transportAllowance - si, 0); // 扶養0 住民税は別途
-        // 住民税は前年所得ベースだが、ここでは「月割額」として一定とする（ボーナスからは引かれないのが通例だが、年収ベースの負担感として表示）
-        const residentTaxText = document.getElementById('residentTax').textContent;
-        // 数字以外を除去（マイナス、カンマ、円など全て除去して絶対値を取得）
-        const taxVal = parseInt(residentTaxText.replace(/[^0-9]/g, '')) || 0;
-
-        // 住民税は表示上マイナスがついているが、ここでは控除額として正の値で扱う
-        // しかし textContent には '-' が含まれている可能性があるため、上記regexで数字だけ抜き出し、正の値として使用する
-
-        const currentDeduction = si + it + taxVal + addDeduction;
-        const currentNet = currentTotalGross - currentDeduction;
-
-        netPayData.push(currentNet);
-        TaxData.push(currentDeduction);
+// ========================================
+// 5. Core App Controller
+// ========================================
+class AppController {
+    constructor() {
+        this.calc = new SalaryCalculator(SALARY_CONFIG);
+        this.ui = new UIManager();
+        this.chart = null;
+        this.activeRegion = 'osaka';
     }
 
-    // チャート描画または更新
-    console.log("Updating chart...", labels.length, netPayData, TaxData); // Debug log
+    /** Initializes event listeners and performs first calculation. */
+    init() {
+        this.setupEventListeners();
+        this.calculate();
+    }
 
-    if (monthlyChart) {
-        monthlyChart.data.datasets[0].data = netPayData;
-        monthlyChart.data.datasets[1].data = TaxData;
-        monthlyChart.update();
-    } else {
-        if (typeof Chart === 'undefined') {
-            console.error("Chart.js is not loaded!");
-            return;
-        }
-        monthlyChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '手取り',
-                        data: netPayData,
-                        backgroundColor: 'rgba(0, 217, 255, 0.6)',
-                        borderColor: 'rgba(0, 217, 255, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: '控除（税・保険）',
-                        data: TaxData,
-                        backgroundColor: 'rgba(168, 85, 247, 0.6)',
-                        borderColor: 'rgba(168, 85, 247, 1)',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        ticks: { color: 'rgba(255,255,255,0.7)' },
-                        grid: { color: 'rgba(255,255,255,0.1)' }
-                    },
-                    y: {
-                        stacked: true,
-                        ticks: { color: 'rgba(255,255,255,0.7)' },
-                        grid: { color: 'rgba(255,255,255,0.1)' }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: { color: 'rgba(255,255,255,0.9)' }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function (context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed.y);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
+    /** Attaches listeners to all inputs and prefecture selection. */
+    setupEventListeners() {
+        const allInputs = document.querySelectorAll('input, select');
+        allInputs.forEach(input => {
+            input.addEventListener('input', () => this.calculate());
+            input.addEventListener('change', () => this.calculate());
+
+            // Auto-format expression inputs on blur
+            if (['totalPayment', 'transportAllowance', 'additionalPayment', 'additionalDeduction'].includes(input.id)) {
+                input.addEventListener('blur', (e) => {
+                    const res = Utils.evaluateExpression(e.target.value);
+                    if (res > 0) e.target.value = res;
+                });
             }
         });
+
+        // Region Switching
+        this.ui.regionSelect.addEventListener('change', (e) => {
+            this.activeRegion = e.target.value;
+            this.calculate();
+        });
     }
-}
 
-// ========================================
-// アドバイス生成
-// ========================================
-function generateAdvice(totalPayment, overtimePay, overtimeHours, overtimePeriod, totalGrossWithOvertime) {
-    const adviceCard = document.getElementById('adviceCard');
-    const adviceText = document.getElementById('adviceText');
+    /** Orchestrates the calculation and UI update flow. */
+    calculate() {
+        const inputs = this.ui.getInputs();
+        const results = this.processCalculations(inputs);
+        this.ui.updateDisplay(results);
+        this.generateAdvice(inputs, results);
+        this.updateChart(inputs, results);
+    }
 
-    // 残業なしの場合の等級
-    const baseGrade = getStandardRemuneration(totalPayment);
-    const baseGradeIndex = getGradeIndex(totalPayment);
+    /** Core business logic for a single month and the annual estimates. */
+    processCalculations(inputs) {
+        const rates = SALARY_CONFIG.RATES;
+        const overtimePay = this.calc.calculateOvertimePay(inputs.totalPayment, inputs.overtimeMinutes);
+        const monthlyTotalGross = inputs.totalPayment + inputs.transportAllowance + overtimePay + inputs.additionalPayment;
+        
+        // Social Insurance (Monthly)
+        const si = this.calc.calculateSocialInsurance(monthlyTotalGross, inputs.ageGroup, this.activeRegion);
+        si.employment = Math.round(monthlyTotalGross * rates.employmentInsurance);
+        si.total += si.employment;
 
-    // 残業ありの場合の等級
-    const withOvertimeGrade = getStandardRemuneration(totalGrossWithOvertime);
-    const withOvertimeGradeIndex = getGradeIndex(totalGrossWithOvertime);
+        // Annual Data
+        const annualData = this.calculateAnnual(inputs, overtimePay);
 
-    const gradeIncrease = withOvertimeGradeIndex - baseGradeIndex;
+        // Taxes (Prated derived from annual)
+        const monthlyTax = {
+            income: Math.round(annualData.incomeTax / 12),
+            resident: Math.round(annualData.residentTax / 12)
+        };
 
-    if (overtimeHours > 0 && overtimePay > 0) {
-        const monthlySocialInsuranceDiff =
-            (withOvertimeGrade - baseGrade) * (RATES.healthInsurance + RATES.pension);
-        const annualIncrease = Math.round(monthlySocialInsuranceDiff * 12);
+        const monthlyNetPay = monthlyTotalGross - (si.total + monthlyTax.income + monthlyTax.resident + inputs.additionalDeduction);
 
-        if (isAprilToJunePeriod(overtimePeriod) && gradeIncrease > 0) {
-            // 月間の時間に変換して表示 (dailyHours * 20)
-            const monthlyHours = overtimeHours;
-            const hoursDisplay = Math.floor(monthlyHours) + '時間' +
-                (monthlyHours % 1 > 0 ? Math.round((monthlyHours % 1) * 60) + '分' : '');
+        return {
+            inputs,
+            monthly: {
+                totalGross: monthlyTotalGross, overtimePay, si, tax: monthlyTax, netPay: monthlyNetPay
+            },
+            annual: {
+                income: annualData.income, deduction: annualData.deduction, netPay: annualData.netPay, si: annualData.totalSI
+            },
+            furusato: this.calc.calculateFurusatoLimit(annualData.income, annualData.totalSI)
+        };
+    }
 
-            adviceText.innerHTML = `
-                 4〜6月に残業が <strong>${hoursDisplay}</strong> 以上続くと、
-                9月〜翌年8月の社会保険料が <strong>月額${formatCurrency(Math.round(monthlySocialInsuranceDiff))}</strong> 
-                増加し、年間で <strong>${formatCurrency(annualIncrease)}</strong> の負担増となります。
-            `;
-            adviceCard.style.borderColor = 'rgba(255, 107, 107, 0.5)';
-            adviceCard.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(168, 85, 247, 0.1))';
-        } else if (!isAprilToJunePeriod(overtimePeriod) && overtimePeriod !== 'none') {
-            adviceText.innerHTML = `
-                 残業を4〜6月以外に集中させているため、社会保険料の等級上昇を回避できています。
-                もし同じ残業を4〜6月に行った場合、年間約 <strong>${formatCurrency(annualIncrease)}</strong> 
-                社会保険料が増加していました。
-            `;
-            adviceCard.style.borderColor = 'rgba(0, 217, 255, 0.5)';
-            adviceCard.style.background = 'linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(168, 85, 247, 0.1))';
+    /** Precise estimation for annual income, SI, and taxes. */
+    calculateAnnual(inputs, overtimePay) {
+        let annualOvertime = 0;
+        if (inputs.overtimePeriod === 'all') annualOvertime = overtimePay * 12;
+        else if (inputs.overtimePeriod !== 'none') annualOvertime = overtimePay * 3;
+
+        const income = (inputs.totalPayment + inputs.transportAllowance + inputs.additionalPayment) * 12 
+                       + annualOvertime + (inputs.totalPayment * inputs.bonusMonths);
+        
+        const siRatesCommon = SALARY_CONFIG.RATES.pension + SALARY_CONFIG.RATES.childSupport +
+                       (inputs.ageGroup === 'over40' ? SALARY_CONFIG.RATES.nursingInsurance : 0);
+        const totalSiRate = SALARY_CONFIG.REGION_RATES[this.activeRegion] + siRatesCommon;
+        
+        // SI is based on grades which may differ during OT periods
+        const gradeWithOT = this.calc.getStandardRemuneration(inputs.totalPayment + inputs.transportAllowance + overtimePay + inputs.additionalPayment);
+        const gradeBase = this.calc.getStandardRemuneration(inputs.totalPayment + inputs.transportAllowance + inputs.additionalPayment);
+        
+        let subtotalSI = 0;
+        if (inputs.overtimePeriod === 'all') {
+            subtotalSI = gradeWithOT * totalSiRate * 12;
+        } else if (inputs.overtimePeriod !== 'none') {
+            subtotalSI = (gradeWithOT * totalSiRate * 3) + (gradeBase * totalSiRate * 9);
         } else {
-            adviceText.innerHTML = `
-                残業時期を選択すると、社会保険料への影響を詳しくシミュレーションできます。
-                4〜6月の残業は9月以降の社会保険料に影響します。
-            `;
-            adviceCard.style.borderColor = 'rgba(0, 217, 255, 0.3)';
-            adviceCard.style.background = 'linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(168, 85, 247, 0.1))';
+            subtotalSI = gradeBase * totalSiRate * 12;
         }
-    } else {
-        adviceText.innerHTML = `
-             残業時間を入力すると、残業時期による社会保険料への影響をシミュレーションできます。
-            4〜6月の残業は「標準報酬月額」を押し上げ、9月〜翌年8月の保険料が上がります。
-        `;
-        adviceCard.style.borderColor = 'rgba(0, 217, 255, 0.3)';
-        adviceCard.style.background = 'linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(168, 85, 247, 0.1))';
+        const totalSI = Math.round(subtotalSI + income * SALARY_CONFIG.RATES.employmentInsurance);
+
+        // Taxes
+        const taxableIncome = Math.max(0, income - this.calc.calculateSalaryDeduction(income) - 480000 - totalSI);
+        const incomeTax = this.calc.calculateIncomeTax(taxableIncome);
+        const residentTax = Math.max(0, taxableIncome * 0.10) + SALARY_CONFIG.RATES.residentTaxFixed;
+
+        const deduction = totalSI + incomeTax + residentTax + (inputs.additionalDeduction * 12);
+
+        return { income, deduction, netPay: income - deduction, incomeTax, residentTax, totalSI };
     }
-}
 
-// ========================================
-// イベントリスナー
-// ========================================
-document.addEventListener('DOMContentLoaded', () => {
-    calculate();
+    /** Logic for dynamic insights/advice based on overtime timing. */
+    generateAdvice(inputs, results) {
+        const { totalPayment, additionalPayment, overtimeMinutes, overtimePeriod } = inputs;
+        const otPay = results.monthly.overtimePay;
+        const totalGross = results.monthly.totalGross;
 
-    const inputs = document.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.addEventListener('input', calculate);
-        input.addEventListener('change', calculate);
+        let advice = { text: '残業時間を入力すると、残業時期による社会保険料への影響をシミュレーションできます。' };
 
-        // 特定の入力欄でフォーカスが外れた時に計算結果に置き換える
-        if (input.id === 'totalPayment' || input.id === 'transportAllowance' ||
-            input.id === 'additionalPayment' || input.id === 'additionalDeduction') {
-            input.addEventListener('blur', (e) => {
-                const result = evaluateExpression(e.target.value);
-                if (result > 0) {
-                    e.target.value = result;
+        if (otPay > 0) {
+            const siRateFixed = SALARY_CONFIG.RATES.pension + SALARY_CONFIG.RATES.childSupport;
+            const regionRate = SALARY_CONFIG.REGION_RATES[this.activeRegion];
+            const totalSiRate = siRateFixed + regionRate;
+            
+            const diff = (this.calc.getStandardRemuneration(totalGross) - this.calc.getStandardRemuneration(totalPayment + additionalPayment)) * totalSiRate;
+            
+            if (['all', 'q2'].includes(overtimePeriod) && diff > 0) {
+                const hours = (overtimeMinutes / 60) * 20;
+                const hText = `${Math.floor(hours)}時間${hours % 1 > 0 ? Math.round((hours % 1) * 60) + '分' : ''}`;
+                advice.text = `4〜6月に残業が <strong>${hText}</strong> 以上続くと、9月以降の保険料が <strong>月額${Utils.formatCurrency(Math.round(diff))}</strong> 増加し、年間で <strong>${Utils.formatCurrency(Math.round(diff * 12))}</strong> の負担増となります。`;
+                advice.borderColor = 'rgba(255, 107, 107, 0.5)';
+                advice.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(168, 85, 247, 0.1))';
+            } else if (overtimePeriod !== 'none' && overtimePeriod !== 'all') {
+                advice.text = `残業を4〜6月以外に集中させているため、社会保険料の等級上昇を回避できています。もし4〜6月に行った場合、年間約 <strong>${Utils.formatCurrency(Math.round(diff * 12))}</strong> 負担が増えていました。`;
+                advice.borderColor = 'rgba(0, 217, 255, 0.5)';
+            }
+        }
+        this.ui.updateAdvice(advice);
+    }
+
+    /** Renders and syncs the monthly cashflow bar chart. */
+    updateChart(inputs, results) {
+        const canvas = this.ui.elements.monthlyChart;
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const labels = [], netPayData = [], deductionData = [];
+        const bonusPerTerm = (inputs.totalPayment * inputs.bonusMonths) / 2;
+        const resTax = results.monthly.tax.resident;
+
+        for (let m = 1; m <= 12; m++) {
+            labels.push(`${m}月`);
+            
+            let curOT = 0;
+            if (inputs.overtimePeriod === 'all' || 
+               (inputs.overtimePeriod === 'q1' && m <= 3) || (inputs.overtimePeriod === 'q2' && m >= 4 && m <= 6) ||
+               (inputs.overtimePeriod === 'q3' && m >= 7 && m <= 9) || (inputs.overtimePeriod === 'q4' && m >= 10)) {
+                curOT = results.monthly.overtimePay;
+            }
+
+            const curBonus = (inputs.bonusMonths > 0 && (m === 6 || m === 12)) ? bonusPerTerm : 0;
+            const curGross = inputs.totalPayment + inputs.transportAllowance + curOT + inputs.additionalPayment + curBonus;
+            
+            const si = this.calc.calculateSocialInsurance(curGross, inputs.ageGroup, this.activeRegion);
+            const empSI = Math.round(curGross * SALARY_CONFIG.RATES.employmentInsurance);
+            const it = this.calc.calculateIncomeTax(Math.max(0, curGross - inputs.transportAllowance - si.total - empSI - 40000));
+            
+            const totalDed = si.total + empSI + it + resTax + inputs.additionalDeduction;
+            netPayData.push(curGross - totalDed);
+            deductionData.push(totalDed);
+        }
+
+        if (this.chart) {
+            this.chart.data.datasets[0].data = netPayData;
+            this.chart.data.datasets[1].data = deductionData;
+            this.chart.update();
+        } else {
+            this.chart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '手取り', data: netPayData, backgroundColor: 'rgba(0, 217, 255, 0.6)', borderColor: 'rgba(0, 217, 255, 1)', borderWidth: 1 },
+                        { label: '控除', data: deductionData, backgroundColor: 'rgba(168, 85, 247, 0.6)', borderColor: 'rgba(168, 85, 247, 1)', borderWidth: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { 
+                        x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.7)' }, grid: { color: 'rgba(255,255,255,0.1)' } }, 
+                        y: { stacked: true, ticks: { color: 'rgba(255,255,255,0.7)' }, grid: { color: 'rgba(255,255,255,0.1)' } } 
+                    },
+                    plugins: { 
+                        legend: { labels: { color: 'rgba(255,255,255,0.9)' } }, 
+                        tooltip: { mode: 'index', intersect: false, callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Utils.formatCurrency(ctx.parsed.y)}円` } } 
+                    }
                 }
             });
         }
-    });
+    }
+}
+
+// ========================================
+// 6. Application Entry Point
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new AppController();
+    app.init();
 });

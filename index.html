@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>給与シミュレーター | 大阪版</title>
+    <title>給与シミュレーター | 主要都市版</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
@@ -19,21 +20,29 @@
             <div class="left-column">
                 <!-- メインカード: 月額給与明細 -->
                 <section class="card main-card">
-                    <h2>試算入力（月額給与）</h2>
+                    <div class="card-header">
+                        <h2>試算入力（月額給与）</h2>
+                        <select id="regionSelect" class="region-select">
+                            <option value="osaka">大阪2026年度</option>
+                            <option value="tokyo">東京2026年度</option>
+                            <option value="hyogo">兵庫2026年度</option>
+                            <option value="kyoto">京都2026年度</option>
+                        </select>
+                    </div>
                     <!-- ... (inner content same as before) ... -->
                     <div class="input-section">
                         <div class="input-group">
-                            <label for="totalPayment">支払総額</label>
+                            <label for="totalPayment">支払総額（基本・諸手当）</label>
                             <div class="input-wrapper">
-                                <input type="text" id="totalPayment" value="276000" placeholder="基本給・諸手当 (例: 20+5+1)">
+                                <input type="text" id="totalPayment" value="276000" placeholder="(例:200000+12000..)">
                                 <span class="unit">円</span>
                             </div>
                         </div>
                         <div class="input-group">
                             <label for="transportAllowance">通勤交通費</label>
                             <div class="input-wrapper">
-                                <input type="text" id="transportAllowance" value="12000"
-                                    placeholder="非課税の通勤手当 (例: 10+2)">
+                                <input type="text" id="transportAllowance" value="17000"
+                                    placeholder=" (例:400*20+8500+500)">
                                 <span class="unit">円</span>
                             </div>
                         </div>
@@ -106,14 +115,14 @@
 
                         <div class="divider"></div>
 
-                        <div class="addition-header">支給内訳（追加分のみ）</div>
+                        <div class="addition-header">支給内訳（残業代・その他）</div>
                         <div class="result-row addition">
                             <span class="label">目安残業H/月</span>
                             <span class="value" id="monthlyOvertimeHours">0H/月</span>
                         </div>
-                        <div class="result-row addition" id="additionalPaymentRow" style="display: none;">
+                        <div class="result-row addition" id="additionalPaymentRow">
                             <span class="label">その他支給</span>
-                            <span class="value positive" id="additionalPaymentDisplay">+0円</span>
+                            <span class="value" id="additionalPaymentDisplay">+0円</span>
                         </div>
 
                         <div class="deduction-header">控除内訳</div>
@@ -130,6 +139,10 @@
                             <span class="value negative" id="pension">-27,450円</span>
                         </div>
                         <div class="result-row deduction">
+                            <span class="label">子ども・子育て支援金</span>
+                            <span class="value negative" id="childSupport">-0円</span>
+                        </div>
+                        <div class="result-row deduction">
                             <span class="label">雇用保険</span>
                             <span class="value negative" id="employmentInsurance">-1,740円</span>
                         </div>
@@ -141,7 +154,7 @@
                             <span class="label">住民税</span>
                             <span class="value negative" id="residentTax">-13,000円</span>
                         </div>
-                        <div class="result-row deduction" id="additionalDeductionRow" style="display: none;">
+                        <div class="result-row deduction" id="additionalDeductionRow">
                             <span class="label">その他控除</span>
                             <span class="value negative" id="additionalDeductionDisplay">-0円</span>
                         </div>

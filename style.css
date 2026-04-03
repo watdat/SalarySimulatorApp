@@ -1,19 +1,30 @@
 /* ========================================
-   CSS Variables & Base Styles
+   1. CSS Variables & Base Styles
 ======================================== */
 :root {
+    /* Backgrounds */
     --bg-gradient-start: #0f0c29;
     --bg-gradient-mid: #302b63;
     --bg-gradient-end: #24243e;
+    
+    /* Cards */
     --card-bg: rgba(255, 255, 255, 0.05);
     --card-border: rgba(255, 255, 255, 0.1);
+    --advice-glow: rgba(0, 217, 255, 0.3);
+    
+    /* Typography */
     --text-primary: #ffffff;
     --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-dim: rgba(255, 255, 255, 0.6);
     --text-muted: rgba(255, 255, 255, 0.5);
+    
+    /* Accents */
     --accent-cyan: #00d9ff;
     --accent-purple: #a855f7;
     --negative-red: #ff6b6b;
-    --advice-glow: rgba(0, 217, 255, 0.3);
+    --positive-green: #4ade80;
+    
+    /* Inputs */
     --input-bg: rgba(255, 255, 255, 0.08);
     --input-border: rgba(255, 255, 255, 0.2);
     --input-focus: rgba(0, 217, 255, 0.5);
@@ -34,7 +45,7 @@ body {
 }
 
 /* ========================================
-   Container & Layout
+   2. Container & Layout
 ======================================== */
 .container {
     max-width: 600px;
@@ -54,7 +65,6 @@ h1 {
     font-weight: 500;
     color: var(--text-primary);
     display: inline-block;
-    padding-bottom: 0px;
 }
 
 .header-link {
@@ -68,13 +78,8 @@ h1 {
     opacity: 0.8;
 }
 
-.subtitle {
-    display: none;
-    /* Hide subtitle to match image cleanliness */
-}
-
 /* ========================================
-   Card Styles (Glassmorphism)
+   3. Card Components
 ======================================== */
 .card {
     background: linear-gradient(135deg, rgba(0, 217, 255, 0.05), rgba(168, 85, 247, 0.05));
@@ -82,44 +87,53 @@ h1 {
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(0, 217, 255, 0.3);
     border-radius: 16px;
-    padding: 24px;
+    padding: 20px;
     margin-bottom: 16px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.card:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+.card:hover { transform: none !important; }
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
 .card h2 {
     font-size: 1.1rem;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 12px;
+}
+
+.card-header h2 {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 /* ========================================
-   Input Section
+   4. Form Elements (Inputs & Selects)
 ======================================== */
 .input-section {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* Force equal width */
-    gap: 16px;
+    column-gap: 20px;
+    row-gap: 12px;
     margin-bottom: 20px;
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .input-group label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
 }
 
@@ -145,15 +159,9 @@ h1 {
     color: var(--text-primary);
     font-size: 1rem;
     font-family: inherit;
-    padding: 10px 0;
+    padding: 7px 0;
     outline: none;
     width: 100%;
-}
-
-.input-wrapper input::-webkit-outer-spin-button,
-.input-wrapper input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
 }
 
 .input-wrapper .unit {
@@ -162,6 +170,7 @@ h1 {
     margin-left: 4px;
 }
 
+/* Standard Select */
 select {
     background: var(--input-bg);
     border: 1px solid var(--input-border);
@@ -169,36 +178,56 @@ select {
     color: var(--text-primary);
     font-size: 0.95rem;
     font-family: inherit;
-    padding: 10px 12px;
+    padding: 7px 10px;
     outline: none;
     cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-select:focus {
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 0 3px var(--input-focus);
+/* Region Selector (Compact Header Select) */
+.region-select {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 300 !important;
+    -webkit-font-smoothing: antialiased;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-opacity='0.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 32px;
+    transition: border-color 0.2s ease;
 }
 
-select option {
-    background: var(--bg-gradient-mid);
-    color: var(--text-primary);
+.region-select:hover { border-color: var(--advice-glow); }
+
+select option,
+.region-select option {
+    background-color: #1e293b;
+    color: white;
+    font-weight: 300 !important;
 }
 
 /* ========================================
-   Result Section
+   5. Result Breakdown List
 ======================================== */
+.result-section {
+    padding: 0 20px;
+}
+
 .divider {
     height: 1px;
     background: var(--card-border);
-    margin: 16px 0;
+    margin: 8px 0;
 }
 
 .result-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 6px 0;
 }
 
 .result-row .label {
@@ -221,39 +250,16 @@ select option {
 .addition-header {
     font-size: 0.8rem;
     color: var(--text-muted);
-    margin-top: 8px;
-    margin-bottom: 4px;
+    margin-top: 4px;
+    margin-bottom: 2px;
 }
 
-.result-row.deduction .label {
-    font-size: 0.9rem;
-}
+.value.negative { color: var(--negative-red); }
+.value.positive { color: var(--positive-green); }
 
-.result-row.deduction .value {
-    font-size: 0.9rem;
-}
-
-.value.negative {
-    color: var(--negative-red);
-}
-
-.value.positive {
-    color: #4ade80;
-}
-
-.result-row.net-pay {
-    margin-top: 8px;
-}
-
-.result-row.net-pay .label {
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.result-row.net-pay .value {
-    font-size: 1.4rem;
-    font-weight: 700;
-}
+.result-row.net-pay { margin-top: 4px; }
+.result-row.net-pay .label { font-size: 1.1rem; font-weight: 500; }
+.result-row.net-pay .value { font-size: 1.4rem; font-weight: 700; }
 
 .value.highlight {
     color: var(--accent-cyan);
@@ -261,36 +267,25 @@ select option {
 }
 
 /* ========================================
-   Annual Card (Now Top)
+   6. Annual Summary Blocks
 ======================================== */
-.annual-card {
-    /* Background inherited from .card to match others */
-    margin-bottom: 25px;
-}
-
-.annual-card h2 {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 10px;
-}
+.annual-card { margin-bottom: 16px; }
 
 .annual-grid {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 8px;
 }
 
 .annual-stats-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
+    gap: 10px;
 }
 
 .annual-item {
     background: var(--input-bg);
-    padding: 15px;
+    padding: 8px 10px;
     border-radius: 12px;
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -300,7 +295,7 @@ select option {
     display: block;
     font-size: 0.8rem;
     color: var(--text-muted);
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .annual-value {
@@ -312,17 +307,16 @@ select option {
 .annual-value.highlight {
     color: var(--accent-cyan);
     font-size: 1.3rem;
-    /* Slightly larger for emphasis */
 }
 
 /* Furusato Section */
 .annual-item.furusato {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(0, 217, 255, 0.05));
     border: 1px solid rgba(168, 85, 247, 0.3);
-    padding: 15px 20px;
+    padding: 8px 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     text-align: left;
 }
 
@@ -335,9 +329,8 @@ select option {
 
 .furusato-header .annual-label {
     font-size: 0.95rem;
-    /* Larger label */
-    margin-bottom: 0;
     color: var(--text-primary);
+    margin-bottom: 0;
 }
 
 .furusato-link {
@@ -347,14 +340,13 @@ select option {
     border: 1px solid var(--accent-cyan);
     padding: 4px 12px;
     border-radius: 20px;
-    transition: all 0.2s ease;
     background: rgba(0, 217, 255, 0.1);
+    transition: all 0.2s ease;
 }
 
 .furusato-link:hover {
     background: var(--accent-cyan);
     color: #0f172a;
-    text-decoration: none;
 }
 
 .furusato-value-row {
@@ -362,26 +354,10 @@ select option {
     align-items: center;
     gap: 10px;
     font-size: 1.0rem;
-    color: var(--accent-purple);
-}
-
-.furusato-arrow {
-    color: #eab308;
-    /* Yellow arrow */
-    font-weight: bold;
-}
-
-.furusato-text {
-    font-weight: 500;
-}
-
-.furusato-text .accent {
-    font-weight: 700;
-    font-size: 1.1rem;
 }
 
 /* ========================================
-   Advice Card
+   7. Advice & Info Sheets
 ======================================== */
 .advice-card {
     display: flex;
@@ -392,10 +368,7 @@ select option {
     box-shadow: 0 0 20px var(--advice-glow);
 }
 
-.advice-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
+.advice-icon { font-size: 1.5rem; flex-shrink: 0; }
 
 .advice-text {
     font-size: 0.95rem;
@@ -404,7 +377,16 @@ select option {
 }
 
 /* ========================================
-   Footer
+   8. Charts & Analytics
+======================================== */
+.chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 400px;
+}
+
+/* ========================================
+   9. Footer
 ======================================== */
 footer {
     text-align: center;
@@ -413,111 +395,22 @@ footer {
     font-size: 0.8rem;
 }
 
-.chart-container {
-    position: relative;
-    width: 100%;
-    min-height: 400px;
-}
-
 /* ========================================
-   Responsive
+   10. Responsive Design
 ======================================== */
 @media (max-width: 480px) {
-    .container {
-        padding: 16px;
-    }
-
-    header h1 {
-        font-size: 1.5rem;
-    }
-
-    .input-section {
-        grid-template-columns: 1fr;
-    }
-
-    .annual-stats-row {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-
-    .annual-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 16px;
-    }
-
-    .annual-label {
-        margin-bottom: 0;
-    }
+    .container { padding: 16px; }
+    .input-section { grid-template-columns: 1fr; }
+    .annual-stats-row { grid-template-columns: 1fr; gap: 8px; }
+    .annual-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }
+    .annual-label { margin-bottom: 0; }
 }
 
-/* ========================================
-   PC Layout (2 Columns)
-======================================== */
 @media (min-width: 1024px) {
-    .container {
-        max-width: 1400px;
-    }
-
-    main {
-        display: grid;
-        grid-template-columns: 400px 1fr;
-        gap: 24px;
-        align-items: start;
-    }
-
-    .left-column {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-    }
-
-    .right-column {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-        background: none;
-        border: none;
-        padding: 0;
-        box-shadow: none;
-        backdrop-filter: none;
-    }
-
-    .left-column>.card,
-    .right-column>.card {
-        margin-bottom: 0;
-    }
-
-    /* Annual Grid Side-by-Side */
-    .annual-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        align-items: stretch;
-    }
-
-    .annual-stats-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
-
-    .annual-item.furusato {
-        grid-column: auto;
-        margin-top: 0;
-    }
-
-    .chart-container {
-        position: relative;
-        width: 100%;
-        min-height: 500px;
-    }
-}
-
-/* Ensure ALL hover transforms are gone */
-.card:hover,
-.advice-card:hover {
-    transform: none !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    .container { max-width: 1400px; }
+    main { display: grid; grid-template-columns: 380px 1fr; gap: 16px; align-items: start; }
+    .left-column, .right-column { display: flex; flex-direction: column; gap: 16px; }
+    .card { margin-bottom: 0; }
+    .annual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-container { min-height: 500px; }
 }
